@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { loadOne, saveOne } from "./supabaseClient.js";
-
+```js
+   const SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4a2p2Ympsc2JnbWJhbG9raXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMDEzOTAsImV4cCI6MjA5MTc3NzM5MH0.eOtAl-n3qNSLR0BQNKhr8jiE5qXResibjKVut0fpEHQ
+   
 /* ════════════════════════════════════════════════════════════════════════════
    IMAGENS — Vaquinhas como mascotes nomeados
 ═══════════════════════════════════════════════════════════════════════════ */
