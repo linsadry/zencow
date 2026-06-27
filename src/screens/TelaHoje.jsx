@@ -231,3 +231,84 @@ export default function TelaHoje({
         {memoriaDoDia && (
           <Card style={{
             padding: "14px 14px", marginBottom: 14,
+            background: `linear-gradient(135deg, ${T.lavBg} 0%, ${T.bgCard} 100%)`,
+            border: `1px solid ${T.lav}33`,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <img src={COW_MIMOSA} alt="" style={{ width: 38, height: 38, objectFit: "contain", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div className="serif" style={{ fontSize: 17, fontWeight: 700, color: T.lav }}>Memória do dia</div>
+                <div style={{ fontSize: 11, color: T.textMute, fontStyle: "italic", marginTop: 1 }}>"Olha essa lembrança..."</div>
+              </div>
+              <Pill label={memoriaDoDia.recencia} color={T.lav} bg="#fff" />
+            </div>
+            <button onClick={() => onNav("memorias")} style={{
+              display: "block", width: "100%", borderRadius: 14, overflow: "hidden",
+              border: `2px solid ${T.lav}44`, background: T.bgCard, padding: 0,
+            }}>
+              <div style={{ aspectRatio: "4/3", overflow: "hidden", background: T.bgInput, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <img src={memoriaDoDia.foto} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+              <div style={{ padding: "10px 14px", textAlign: "left", background: T.bgCard }}>
+                <div style={{ fontSize: 12, color: T.lav, fontWeight: 800, letterSpacing: 0.3 }}>{memoriaDoDia.tipo.toUpperCase()}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{memoriaDoDia.sub}</div>
+                <div style={{ fontSize: 11, color: T.textMute, marginTop: 1 }}>{memoriaDoDia.dataStr}</div>
+              </div>
+            </button>
+          </Card>
+        )}
+
+        {/* 5. Evolução da fazenda */}
+        {evolucao.length > 0 && (
+          <Card style={{ padding: "14px 14px", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <img src={COW_ESTRELA} alt="" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div className="serif" style={{ fontSize: 16, fontWeight: 700, color: T.moss }}>Evolução da fazenda</div>
+                <div style={{ fontSize: 11, color: T.textMute, fontStyle: "italic" }}>"Pequenos passos, grandes colheitas"</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+              {evolucao.map((it, i) => (
+                <div key={i} style={{
+                  flexShrink: 0, minWidth: 120, padding: "11px 12px",
+                  borderRadius: 12, background: it.bg, border: `1px solid ${it.cor}22`,
+                }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{it.emoji}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: T.textMute, letterSpacing: 0.3, textTransform: "uppercase" }}>{it.titulo}</div>
+                  <div className="serif" style={{ fontSize: 18, fontWeight: 700, color: it.cor, marginTop: 2, letterSpacing: -0.3 }}>{it.valor}</div>
+                  <div style={{ fontSize: 10, color: T.textSub, marginTop: 1 }}>{it.sub}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* 6. Atalhos rápidos */}
+        <Card style={{ padding: "14px 14px" }}>
+          <div className="serif" style={{ fontWeight: 700, fontSize: 16, marginBottom: 12, color: T.text }}>Atalhos rápidos</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {[
+              { id: "closet",   label: "Novo look",   cor: T.sand, bg: T.sandBg, emoji: "👗" },
+              { id: "beauty",   label: "Nova make",   cor: T.rose, bg: T.roseBg, emoji: "💄" },
+              { id: "beauty",   label: "Foto pele",   cor: T.rose, bg: T.roseBg, emoji: "📸" },
+              { id: "pets",     label: "Pets",        cor: T.blue, bg: T.blueBg, emoji: "🐾" },
+              { id: "casa",     label: "Casa & Sítio",cor: T.moss, bg: T.mossBg, emoji: "🏡" },
+              { id: "memorias", label: "Memórias",    cor: T.lav,  bg: T.lavBg,  emoji: "💫" },
+            ].map((a, i) => (
+              <button key={i} onClick={() => onNav(a.id)} style={{
+                padding: "14px 6px", borderRadius: 14,
+                background: a.bg, border: `1px solid ${a.cor}22`,
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+              }}>
+                <span style={{ fontSize: 26 }}>{a.emoji}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: a.cor }}>{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
