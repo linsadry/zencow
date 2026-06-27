@@ -5,7 +5,7 @@ import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 import { parseDate, daysSince, formatDays } from "../utils/dates.js";
 import { getPetAlerts, getAllPetAlerts } from "../utils/pets.js";
-import imgMargarida from "../assets/cow-margarida.png";
+import { COW_MARGARIDA } from "../constants/images.js";
 
 const now = new Date();
 
@@ -469,7 +469,7 @@ function PetDetail({ pet, setPets, onBack }) {
             background:alertas[0].nivel==="danger"?T.dangerBg:T.alertBg,
             border:`1px solid ${alertas[0].nivel==="danger"?T.danger:T.alert}33`}}>
             <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-              <img src={imgMargarida} alt="" style={{width:24,height:24,objectFit:"contain"}}/>
+              <img src={COW_MARGARIDA} alt="" style={{width:24,height:24,objectFit:"contain"}}/>
               Atenção
             </div>
             {alertas.map((a, i) => {
