@@ -1,0 +1,75 @@
+/* ════════════════════════════════════════════════════════════════════
+   ZenCow — Global Styles
+   @import movido para cá (fix esbuild "Expected identifier" error)
+════════════════════════════════════════════════════════════════════ */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap");
+
+/* ── CSS Variables (Theme) ─────────────────────────────────────── */
+:root {
+  --bg-page:   #F5F0EB;
+  --bg-card:   #FDFAF7;
+  --bg-input:  #F0EBE4;
+  --border:    #E8E0D6;
+  --border-md: #D5C9BC;
+  --text:      #2A2118;
+  --text-sub:  #7A6E65;
+  --text-mute: #B0A396;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg-page);
+  color: var(--text);
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+/* ── Animations ────────────────────────────────────────────────── */
+@keyframes slideIn {
+  from { transform: translateX(-270px); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes fadeUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* ── Utility Classes ───────────────────────────────────────────── */
+.slide-in { animation: slideIn  .2s  cubic-bezier(.4,0,.2,1); }
+.fade-up  { animation: fadeUp   .2s  cubic-bezier(.4,0,.2,1); }
+.float-y  { animation: floatY   3.5s ease-in-out infinite; }
+.serif    {
+  font-family: 'Fraunces', serif;
+  font-feature-settings: "ss01";
+}
