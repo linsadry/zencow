@@ -17,6 +17,16 @@ export const daysSince = (dateStr) => {
   return u === null ? null : -u;
 };
 
+export const formatDays = (d) => {
+  if (d === null) return "";
+  if (d < 0)   return `${-d}d atrás`;
+  if (d === 0) return "hoje";
+  if (d === 1) return "amanhã";
+  if (d < 7)   return `em ${d}d`;
+  if (d < 30)  return `em ${Math.floor(d / 7)}sem`;
+  return `em ${Math.floor(d / 30)}m`;
+};
+
 export const alertLevel = (d) => {
   if (d === null) return null;
   if (d < 0)   return "danger";
@@ -24,12 +34,7 @@ export const alertLevel = (d) => {
   return null;
 };
 
-export const formatDays = (d) => {
-  if (d === null)  return "";
-  if (d < 0)       return `${-d}d atrás`;
-  if (d === 0)     return "hoje";
-  if (d === 1)     return "amanhã";
-  if (d < 7)       return `em ${d}d`;
-  if (d < 30)      return `em ${Math.floor(d/7)}sem`;
-  return `em ${Math.floor(d/30)}m`;
-};
+export const MESES_PT   = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+export const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+export const WEEK_L     = ["D","S","T","Q","Q","S","S"];
+export const now        = new Date();
