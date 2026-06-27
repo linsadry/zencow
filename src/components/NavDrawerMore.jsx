@@ -1,4 +1,3 @@
-// src/components/NavDrawerMore.jsx
 import { T } from "../constants/index.js";
 import { LOGO } from "../constants/images.js";
 import { MASCOTES, COW_IMG } from "../constants/mascotes.js";
