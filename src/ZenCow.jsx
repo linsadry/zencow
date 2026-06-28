@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+const SUPABASE_URL = "https://uxkjvbjlsbgmbalokisf.supabase.co";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const DATA_ID = "zencow-main";
+
+const sbHeaders = () => ({
+  "apikey": SUPABASE_KEY,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "Content-Type": "application/json",
+});
 import { T } from "./constants/theme.js";
 import TelaHome     from "./screens/TelaHome.jsx";
 import TelaPets     from "./screens/TelaPets.jsx";
@@ -52,37 +60,41 @@ export default function ZenCow() {
   const [menuOpen, setMenuOpen] = useState(false);
   const saveTimer = useRef(null);
 
-  /* ── Load ─────────────────────────────────────────────────── */
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await sb
-          .from("zencow_data")
-          .select("data")
-          .eq("id", DATA_ID)
-          .maybeSingle();
-        if (data?.data) setState(prev => ({ ...prev, ...data.data }));
-      } catch (e) {
-        console.warn("ZenCow load error:", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  /* ── Save (debounced 1.5 s) ───────────────────────────────── */
-  const persist = useCallback(async (snapshot) => {
-    setSaving(true);
+ // ── Load ─────────────────────────────────────────────────── */
+useEffect(() => {
+  (async () => {
     try {
-      const { petOpenId, ...persistable } = snapshot; // petOpenId é UI transient
-      await sb.from("zencow_data").upsert({ id: DATA_ID, data: persistable });
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/zencow_data?id=eq.${DATA_ID}&select=data`,
+        { headers: sbHeaders() }
+      );
+      const rows = await res.json();
+      if (rows?.[0]?.data) setState(prev => ({ ...prev, ...rows[0].data }));
     } catch (e) {
-      console.warn("ZenCow save error:", e);
+      console.warn("ZenCow load error:", e);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
-  }, []);
+  })();
+}, []);
 
+/* ── Save (debounced 1.5 s) ───────────────────────────────── */
+const persist = useCallback(async (snapshot) => {
+  setSaving(true);
+  try {
+    const { petOpenId, ...persistable } = snapshot;
+    await fetch(`${SUPABASE_URL}/rest/v1/zencow_data`, {
+      method: "POST",
+      headers: { ...sbHeaders(), "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify({ id: DATA_ID, data: persistable }),
+    });
+  } catch (e) {
+    console.warn("ZenCow save error:", e);
+  } finally {
+    setSaving(false);
+  }
+}, []);
+  
   const update = useCallback((patch) => {
     setState(prev => {
       const next = typeof patch === "function" ? patch(prev) : { ...prev, ...patch };
