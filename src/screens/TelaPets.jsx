@@ -635,7 +635,7 @@ function PetsList({ pets, setPets, onOpen, onMenu }) {
 }
 
 /* ── TelaPets (root) ──────────────────────────────────────────── */
-export default function TelaPets({ pets, setPets, petOpenId, setPetOpenId, onMenu }) {
+export default function TelaPets({ pets=[], setPets, petOpenId, setPetOpenId, onMenu }) {
   if (petOpenId) {
     const pet = pets.find(p => p.id === petOpenId);
     if (pet) return <PetDetail pet={pet} setPets={setPets} onBack={() => setPetOpenId(null)}/>;
