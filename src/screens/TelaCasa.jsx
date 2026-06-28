@@ -9,9 +9,10 @@ const FASES      = ["Planejamento","Em andamento","Concluído","Sonhos"];
 const CATEGORIAS = ["Reforma","Jardinagem","Pomar","Energia solar","Cercas","Paisagismo","Outros"];
 
 /* ── Root ─────────────────────────────────────────────────────────────── */
-export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompras, manutencoes=[], setManutencoes, onMenu }) { 
+export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompras, manutencoes=[], setManutencoes, onMenu }) {
   const [tab, setTab] = useState("casa");
 
+  // casaTarefas = tarefas, sitioProjetos = manutencoes
   return (
     <div style={{ display:"flex",flexDirection:"column",height:"100%" }}>
       <AppHeader title="Casa & Sítio" onMenu={onMenu}/>
@@ -28,8 +29,8 @@ export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompra
           ))}
         </div>
 
-        {tab === "casa"  && <CasaTab  tarefas={casaTarefas}  setTarefas={setCasaTarefas}/>}
-        {tab === "sitio" && <SitioTab projetos={sitioProjetos} setProjetos={setSitioProjetos}/>}
+        {tab === "casa"  && <CasaTab  tarefas={tarefas}     setTarefas={setTarefas}/>}
+        {tab === "sitio" && <SitioTab projetos={manutencoes} setProjetos={setManutencoes}/>}
       </div>
     </div>
   );
