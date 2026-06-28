@@ -30,7 +30,7 @@ export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompra
         </div>
 
         {tab === "casa"  && <CasaTab  tarefas={tarefas}     setTarefas={setTarefas}/>}
-        {tab === "sitio" && <SitioTab projetos={manutencoes} setProjetos={setManutencoes}/>}
+        {tab === "sitio" && <SitioTab projetos={manutencoes} setProjetos={setManutencoes}/>} 
       </div>
     </div>
   );
