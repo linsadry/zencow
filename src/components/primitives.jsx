@@ -1,5 +1,5 @@
-import { useRef } from "react";
 import { T } from "../constants/index.js";
+import { MASCOTES } from "../constants/mascotes.js";
 
 export const Card = ({ children, style = {} }) => (
   <div style={{
@@ -150,8 +150,8 @@ export const ModalActions = ({ onCancel, onSave, saveLabel = "Salvar", color = T
 );
 
 export const MascoteHeader = ({ secao, sub }) => {
-  const { MASCOTES } = require("../constants/mascotes.js");
   const m = MASCOTES[secao];
+  if (!m) return null;
   const fala = m.saudacoes[Math.floor(Math.random() * m.saudacoes.length)];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
