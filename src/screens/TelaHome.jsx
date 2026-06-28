@@ -6,7 +6,7 @@ import { daysSince } from "../utils/dates.js";
 
 const FREQ_LIMITES = { Diário:1,Semanal:7,Quinzenal:14,Mensal:30,Trimestral:90,Semestral:180,Anual:365 };
 
-export default function TelaHome({ state, pets, pecas, memorias, onMenu }) {
+export default function TelaHome({ state={}, pets=[], pecas=[], memorias=[], onMenu }) {
   const { tarefas=[], compras=[], manutencoes=[], beautyProdutos=[], looks=[] } = state;
 
   const petAlerts   = getAllPetAlerts(pets);
