@@ -1,13 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-const SUPABASE_URL = "https://uxkjvbjlsbgmbalokisf.supabase.co";
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const DATA_ID = "zencow-main";
-
-const sbHeaders = () => ({
-  "apikey": SUPABASE_KEY,
-  "Authorization": `Bearer ${SUPABASE_KEY}`,
-  "Content-Type": "application/json",
-});
 import { T } from "./constants/theme.js";
 import TelaHome     from "./screens/TelaHome.jsx";
 import TelaPets     from "./screens/TelaPets.jsx";
@@ -18,29 +9,18 @@ import TelaMemorias from "./screens/TelaMemorias.jsx";
 
 const SUPABASE_URL = "https://uxkjvbjlsbgmbalokisf.supabase.co";
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-  realtime: {
-    params: { eventsPerSecond: 0 },
-  },
-});
 const DATA_ID = "zencow-main";
 
+const sbHeaders = () => ({
+  "apikey": SUPABASE_KEY,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "Content-Type": "application/json",
+});
+
 const INIT_STATE = {
-  pets:         [],
-  petOpenId:    null,
-  pecas:        [],
-  looks:        [],
-  beautyProdutos: [],
-  beautyDiario:   [],
-  tarefas:      [],
-  compras:      [],
-  manutencoes:  [],
-  memorias:     [],
+  pets: [], petOpenId: null, pecas: [], looks: [],
+  beautyProdutos: [], beautyDiario: [],
+  tarefas: [], compras: [], manutencoes: [], memorias: [],
 };
 
 const NAV = [
@@ -60,41 +40,39 @@ export default function ZenCow() {
   const [menuOpen, setMenuOpen] = useState(false);
   const saveTimer = useRef(null);
 
- // ── Load ─────────────────────────────────────────────────── */
-useEffect(() => {
-  (async () => {
-    try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/zencow_data?id=eq.${DATA_ID}&select=data`,
-        { headers: sbHeaders() }
-      );
-      const rows = await res.json();
-      if (rows?.[0]?.data) setState(prev => ({ ...prev, ...rows[0].data }));
-    } catch (e) {
-      console.warn("ZenCow load error:", e);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/zencow_data?id=eq.${DATA_ID}&select=data`,
+          { headers: sbHeaders() }
+        );
+        const rows = await res.json();
+        if (rows?.[0]?.data) setState(prev => ({ ...prev, ...rows[0].data }));
+      } catch (e) {
+        console.warn("ZenCow load error:", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-/* ── Save (debounced 1.5 s) ───────────────────────────────── */
-const persist = useCallback(async (snapshot) => {
-  setSaving(true);
-  try {
-    const { petOpenId, ...persistable } = snapshot;
-    await fetch(`${SUPABASE_URL}/rest/v1/zencow_data`, {
-      method: "POST",
-      headers: { ...sbHeaders(), "Prefer": "resolution=merge-duplicates" },
-      body: JSON.stringify({ id: DATA_ID, data: persistable }),
-    });
-  } catch (e) {
-    console.warn("ZenCow save error:", e);
-  } finally {
-    setSaving(false);
-  }
-}, []);
-  
+  const persist = useCallback(async (snapshot) => {
+    setSaving(true);
+    try {
+      const { petOpenId, ...persistable } = snapshot;
+      await fetch(`${SUPABASE_URL}/rest/v1/zencow_data`, {
+        method: "POST",
+        headers: { ...sbHeaders(), "Prefer": "resolution=merge-duplicates" },
+        body: JSON.stringify({ id: DATA_ID, data: persistable }),
+      });
+    } catch (e) {
+      console.warn("ZenCow save error:", e);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
   const update = useCallback((patch) => {
     setState(prev => {
       const next = typeof patch === "function" ? patch(prev) : { ...prev, ...patch };
@@ -104,7 +82,6 @@ const persist = useCallback(async (snapshot) => {
     });
   }, [persist]);
 
-  /* ── Setter factory ───────────────────────────────────────── */
   const mk = key => fn =>
     update(prev => ({ ...prev, [key]: typeof fn === "function" ? fn(prev[key]) : fn }));
 
@@ -118,10 +95,8 @@ const persist = useCallback(async (snapshot) => {
   const setManutencoes    = mk("manutencoes");
   const setMemorias       = mk("memorias");
   const setPetOpenId      = id => setState(prev => ({ ...prev, petOpenId: id }));
-
   const onMenu = () => setMenuOpen(true);
 
-  /* ── Loading screen ───────────────────────────────────────── */
   if (loading) return (
     <div style={{ height:"100dvh",display:"flex",flexDirection:"column",
       alignItems:"center",justifyContent:"center",background:T.bg }}>
@@ -132,60 +107,50 @@ const persist = useCallback(async (snapshot) => {
     </div>
   );
 
-  /* ── App shell ────────────────────────────────────────────── */
   return (
     <div style={{ height:"100dvh",display:"flex",flexDirection:"column",
       background:T.bg,maxWidth:430,margin:"0 auto",
       position:"relative",overflow:"hidden" }}>
 
-      {/* save indicator bar */}
       {saving && (
         <div style={{ position:"absolute",top:0,left:0,right:0,height:2,zIndex:999,
           background:`linear-gradient(90deg,${T.blue},${T.sand},${T.moss})`,
           animation:"savepulse 1s ease-in-out infinite alternate" }}/>
       )}
 
-      {/* screen area */}
       <div style={{ flex:1,overflow:"hidden",display:"flex",flexDirection:"column" }}>
         {tela==="home" && (
-          <TelaHome
-            state={state} update={update}
+          <TelaHome state={state} update={update}
             pets={state.pets} pecas={state.pecas} memorias={state.memorias}
             onMenu={onMenu}/>
         )}
         {tela==="pets" && (
-          <TelaPets
-            pets={state.pets}         setPets={setPets}
+          <TelaPets pets={state.pets} setPets={setPets}
             petOpenId={state.petOpenId} setPetOpenId={setPetOpenId}
             onMenu={onMenu}/>
         )}
         {tela==="closet" && (
-          <TelaCloset
-            pecas={state.pecas}   setPecas={setPecas}
-            looks={state.looks}   setLooks={setLooks}
+          <TelaCloset pecas={state.pecas} setPecas={setPecas}
+            looks={state.looks} setLooks={setLooks}
             onMenu={onMenu}/>
         )}
         {tela==="beauty" && (
-          <TelaBeauty
-            produtos={state.beautyProdutos} setProdutos={setBeautyProdutos}
-            diario={state.beautyDiario}     setDiario={setBeautyDiario}
+          <TelaBeauty produtos={state.beautyProdutos} setProdutos={setBeautyProdutos}
+            diario={state.beautyDiario} setDiario={setBeautyDiario}
             onMenu={onMenu}/>
         )}
         {tela==="casa" && (
-          <TelaCasa
-            tarefas={state.tarefas}         setTarefas={setTarefas}
-            compras={state.compras}          setCompras={setCompras}
-            manutencoes={state.manutencoes}  setManutencoes={setManutencoes}
+          <TelaCasa tarefas={state.tarefas} setTarefas={setTarefas}
+            compras={state.compras} setCompras={setCompras}
+            manutencoes={state.manutencoes} setManutencoes={setManutencoes}
             onMenu={onMenu}/>
         )}
         {tela==="memorias" && (
-          <TelaMemorias
-            memorias={state.memorias} setMemorias={setMemorias}
+          <TelaMemorias memorias={state.memorias} setMemorias={setMemorias}
             onMenu={onMenu}/>
         )}
       </div>
 
-      {/* bottom nav */}
       <nav style={{ display:"flex",background:T.bgCard,
         borderTop:`1px solid ${T.border}`,
         paddingBottom:"env(safe-area-inset-bottom)",
@@ -205,14 +170,12 @@ const persist = useCallback(async (snapshot) => {
         ))}
       </nav>
 
-      {/* side drawer */}
       {menuOpen && (
         <>
           <div onClick={() => setMenuOpen(false)}
             style={{ position:"absolute",inset:0,background:"rgba(0,0,0,.4)",zIndex:200 }}/>
           <div style={{ position:"absolute",top:0,left:0,bottom:0,width:"72%",
-            background:T.bgCard,zIndex:201,
-            padding:"52px 20px 24px",
+            background:T.bgCard,zIndex:201,padding:"52px 20px 24px",
             display:"flex",flexDirection:"column",gap:4 }}>
             <div className="serif"
               style={{ fontSize:22,fontWeight:700,marginBottom:16,color:T.text }}>
@@ -233,9 +196,7 @@ const persist = useCallback(async (snapshot) => {
         </>
       )}
 
-      <style>{`
-        @keyframes savepulse { from{opacity:.5} to{opacity:1} }
-      `}</style>
+      <style>{`@keyframes savepulse { from{opacity:.5} to{opacity:1} }`}</style>
     </div>
   );
 }
