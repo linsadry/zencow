@@ -1,6 +1,7 @@
 import { daysUntil, alertLevel } from "./dates.js";
 
 export const getPetAlerts = (pet) => {
+   if (!pets) return [];
   const a = [];
 
   (pet.vacinas || []).forEach((v) => {
