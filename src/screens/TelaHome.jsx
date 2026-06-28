@@ -1,5 +1,5 @@
 import { T } from "../constants/theme.js";
-import { Card, Pill, MascoteHeader } from "../components/primitives.jsx";
+import { Card, Pill } from "../components/primitives.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import { getPetAlerts, getAllPetAlerts } from "../utils/pets.js";
 import { daysSince } from "../utils/dates.js";
