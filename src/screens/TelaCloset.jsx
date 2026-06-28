@@ -270,9 +270,10 @@ function PecaModal({ peca, onClose, onSave, onDelete }) {
   });
   const fileRef = useRef();
   const handleFoto = async (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    setForm((x) => ({ ...x, foto: await compressImage(f, 800, 0.85) }));
-  };
+  const f = e.target.files[0]; if (!f) return;
+  const foto = await compressImage(f, 800, 0.85);
+  setForm((x) => ({ ...x, foto }));
+};
 
   return (
     <Modal title={peca ? "Editar Peça" : "Nova Peça"} onClose={onClose}>
@@ -338,9 +339,10 @@ function LookModal({ look, pecas, onClose, onSave, onDelete }) {
   });
   const fileRef = useRef();
   const handleFoto = async (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    setForm((x) => ({ ...x, foto: await compressImage(f, 1024, 0.85) }));
-  };
+  const f = e.target.files[0]; if (!f) return;
+  const foto = await compressImage(f, 800, 0.85);
+  setForm((x) => ({ ...x, foto }));
+};
   const togglePeca = (id) => setForm((f) => ({
     ...f, pecasIds: f.pecasIds.includes(id) ? f.pecasIds.filter((x) => x !== id) : [...f.pecasIds, id],
   }));
