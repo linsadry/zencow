@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx";
+import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx"; 
 import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 
