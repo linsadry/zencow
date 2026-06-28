@@ -3,13 +3,18 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true,
-    },
+  define: {
+    global: 'globalThis',
   },
   optimizeDeps: {
     include: ['@supabase/supabase-js'],
+    esbuildOptions: {
+      define: { global: 'globalThis' },
+    },
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
 })
