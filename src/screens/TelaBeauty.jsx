@@ -232,9 +232,10 @@ function ProdutoModal({ produto, onClose, onSave, onDelete }) {
   });
   const fileRef = useRef();
   const handleFoto = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    setForm(x => ({ ...x, foto: await compressImage(f, 600, 0.85) }));
-  };
+  const f = e.target.files[0]; if (!f) return;
+  const foto = await compressImage(f, 600, 0.85);
+  setForm(x => ({ ...x, foto }));
+};
 
   return (
     <Modal title={produto ? "Editar Produto" : "Novo Produto"} onClose={onClose}>
