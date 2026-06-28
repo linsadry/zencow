@@ -247,10 +247,11 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
     foto:null, tags:[], texto:"", humor:"",
   });
   const fileRef = useRef();
-  const handleFoto = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    setForm(x => ({ ...x, foto: await compressImage(f, 1200, 0.85) }));
-  };
+ const handleFoto = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const foto = await compressImage(f, 1200, 0.85);
+  setForm(x => ({ ...x, foto }));
+};
   const toggleTag = tag => setForm(f => ({
     ...f, tags: f.tags.includes(tag) ? f.tags.filter(t=>t!==tag) : [...f.tags, tag],
   }));
