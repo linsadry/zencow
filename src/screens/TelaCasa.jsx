@@ -9,7 +9,7 @@ const FASES      = ["Planejamento","Em andamento","Concluído","Sonhos"];
 const CATEGORIAS = ["Reforma","Jardinagem","Pomar","Energia solar","Cercas","Paisagismo","Outros"];
 
 /* ── Root ─────────────────────────────────────────────────────────────── */
-export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompras, manutencoes=[], setManutencoes, onMenu }) {
+export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompras, manutencoes=[], setManutencoes, onMenu }) { 
   const [tab, setTab] = useState("casa");
 
   return (
