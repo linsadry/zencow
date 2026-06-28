@@ -46,7 +46,12 @@ export default function TelaHome({ state, pets, pecas, memorias, onMenu }) {
     <div style={{ display:"flex",flexDirection:"column",height:"100%" }}>
       <AppHeader title="ZenCow" onMenu={onMenu}/>
       <div style={{ flex:1,overflowY:"auto",padding:"14px 16px 100px" }}>
-        <MascoteHeader secao="home" sub="Bem-vinda à sua fazendinha 🌿"/>
+        <div style={{ padding:"12px 16px 4px" }}>
+  <div className="serif" style={{ fontSize:18,fontWeight:700,color:T.text }}>
+    🐄 ZenCow
+  </div>
+  <div style={{ fontSize:12,color:T.textMute,marginTop:2 }}>Bem-vinda à sua fazendinha 🌿</div>
+</div>
 
         {/* stats row */}
         <div style={{ display:"flex",gap:8,overflowX:"auto",marginBottom:14,paddingBottom:4 }}>
