@@ -1,5 +1,4 @@
 import { T }                              from "../constants/theme.js";
-import { COW_ZEN }                       from "../constants/images.js";
 import { Card, Pill }                    from "../components/primitives.jsx";
 import AppHeader                         from "../components/AppHeader.jsx";
 import { getPetAlerts, getAllPetAlerts } from "../utils/pets.js";
@@ -68,7 +67,7 @@ export default function TelaHome({ state={}, pets=[], pecas=[], memorias=[], onM
       <div style={{flex:1,overflowY:"auto",padding:"14px 16px 100px"}}>
 
         <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
-          <img src={COW_ZEN} alt="" style={{width:48,height:48,objectFit:"contain",flexShrink:0}}/>
+          <img src="/cow-zen.png" alt="" style={{width:48,height:48,objectFit:"contain",flexShrink:0}}/>
           <div>
             <div className="serif" style={{fontSize:20,fontWeight:700,color:T.text,lineHeight:1.1}}>ZenCow</div>
             <div style={{fontSize:11,color:T.textMute,marginTop:2}}>Bem-vinda à sua fazendinha</div>
@@ -140,7 +139,7 @@ export default function TelaHome({ state={}, pets=[], pecas=[], memorias=[], onM
 
         {isEmpty&&(
           <Card style={{padding:"36px 24px",textAlign:"center"}}>
-            <img src={COW_ZEN} alt="" style={{width:96,height:96,objectFit:"contain",margin:"0 auto 16px"}}/>
+            <img src="/cow-zen.png" alt="" style={{width:96,height:96,objectFit:"contain",margin:"0 auto 16px"}}/>
             <div className="serif" style={{fontSize:16,fontWeight:700,marginBottom:6,color:T.text}}>Bem-vinda ao ZenCow!</div>
             <div style={{fontSize:12,color:T.textMute,lineHeight:1.6}}>Use o menu para começar a organizar sua vida</div>
           </Card>
