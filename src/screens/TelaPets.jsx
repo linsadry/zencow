@@ -114,16 +114,40 @@ function PetHistorico({ pet }) {
 /* ════════════════════════════════════════════════════════════════ */
 /* PetGastos                                                       */
 /* ════════════════════════════════════════════════════════════════ */
+/* ── Ícone de recorrência ─────────────────────────────────── */
+function RepeatIcon({ size=13, color="currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="17 1 21 5 17 9"/>
+      <path d="M3 11V9a4 4 0 014-4h14"/>
+      <polyline points="7 23 3 19 7 15"/>
+      <path d="M21 13v2a4 4 0 01-4 4H3"/>
+    </svg>
+  );
+}
+
+const FREQ_LABELS = ["Mensal","Bimestral","Trimestral","Semestral","Anual"];
+
 function PetGastos({ pet, setPets }) {
   const [form, setForm] = useState(null);
   const gastos = pet.gastos || [];
-  const total  = gastos.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
 
+  /* Próxima data de um gasto recorrente */
+  const proximaData = (g) => {
+    if (!g.recorrente || !g.data) return null;
+    const [d, m, y] = g.data.split("-");
+    const base = new Date(+y, +m - 1, +d);
+    const meses = { Mensal:1, Bimestral:2, Trimestral:3, Semestral:6, Anual:12 }[g.frequencia] || 1;
+    base.setMonth(base.getMonth() + meses);
+    return base.toISOString().slice(0,10);
+  };
+
+  /* Salvar gasto (novo ou editar) */
   const salvar = () => {
     if (!form.descricao || !form.valor) return;
-    const item = form.id
-      ? { ...form }
-      : { ...form, id: Date.now().toString() };
+    const item = { ...form, id: form.id || Date.now().toString() };
+    if (!item.recorrente) { delete item.frequencia; }
     setPets(ps => ps.map(p => p.id !== pet.id ? p : {
       ...p, gastos: form.id
         ? (p.gastos || []).map(g => g.id === form.id ? item : g)
@@ -132,31 +156,66 @@ function PetGastos({ pet, setPets }) {
     setForm(null);
   };
 
+  /* Registrar nova ocorrência do gasto recorrente */
+  const registrarOcorrencia = (g) => {
+    const novo = {
+      ...g,
+      id: Date.now().toString(),
+      data: proximaData(g) || new Date().toISOString().slice(0,10),
+    };
+    setPets(ps => ps.map(p =>
+      p.id !== pet.id ? p : { ...p, gastos: [...(p.gastos || []), novo] }
+    ));
+  };
+
   const remover = id => setPets(ps => ps.map(p =>
-    p.id !== pet.id ? p : { ...p, gastos:(p.gastos||[]).filter(g=>g.id!==id) }
+    p.id !== pet.id ? p : { ...p, gastos: (p.gastos||[]).filter(g => g.id !== id) }
   ));
+
+  const total     = gastos.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+  const recorrentes = gastos.filter(g => g.recorrente);
+  const totalRecorr = recorrentes.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+
+  /* agrupa por categoria para totais */
+  const porCat = {};
+  gastos.forEach(g => { porCat[g.categoria] = (porCat[g.categoria]||0) + (parseFloat(g.valor)||0); });
 
   return (
     <div style={{ padding:"0 16px 24px" }}>
       {/* Cabeçalho */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
         <div className="serif" style={{ fontSize:16, fontWeight:700, color:T.text }}>Histórico</div>
-        <button onClick={() => setForm({ descricao:"", valor:"", data:"", categoria:"" })}
-          style={{
-            fontSize:13, fontWeight:700, color:T.sand,
-            background:T.sandBg, borderRadius:20, padding:"5px 14px",
-          }}>
+        <button onClick={() => setForm({ descricao:"", valor:"", data:"", categoria:"Consulta", recorrente:false, frequencia:"Mensal" })}
+          style={{ fontSize:13, fontWeight:700, color:T.sand, background:T.sandBg, borderRadius:20, padding:"5px 14px" }}>
           + Gasto
         </button>
       </div>
 
-      {/* Total */}
+      {/* Totais */}
       {gastos.length > 0 && (
         <Card style={{ padding:"12px 16px", marginBottom:14, background:T.sandBg, border:`1px solid ${T.sand}33` }}>
           <div style={{ fontSize:11, color:T.textMute, fontWeight:600, letterSpacing:.3 }}>TOTAL GASTO</div>
           <div className="serif" style={{ fontSize:26, fontWeight:700, color:T.sand, lineHeight:1.1 }}>
-            R$ {total.toFixed(2)}
+            R$ {total.toFixed(2).replace(".",",")}
           </div>
+          {totalRecorr > 0 && (
+            <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6 }}>
+              <RepeatIcon size={11} color={T.textMute}/>
+              <span style={{ fontSize:11, color:T.textMute }}>
+                Recorrentes: R$ {totalRecorr.toFixed(2).replace(".",",")}/período
+              </span>
+            </div>
+          )}
+          {Object.keys(porCat).length > 1 && (
+            <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3 }}>
+              {Object.entries(porCat).map(([c,v]) => (
+                <div key={c} style={{ display:"flex", justifyContent:"space-between", fontSize:11 }}>
+                  <span style={{ color:T.textSub }}>{c}</span>
+                  <span style={{ fontWeight:700, color:T.text }}>R$ {v.toFixed(2).replace(".",",")}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 
@@ -167,29 +226,65 @@ function PetGastos({ pet, setPets }) {
       )}
 
       {gastos.slice().reverse().map(g => (
-        <Card key={g.id} style={{ padding:"12px 14px", marginBottom:8,
-          display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{g.descricao}</div>
-            <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>{g.data} · {g.categoria}</div>
+        <Card key={g.id} style={{ padding:"11px 14px", marginBottom:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                {g.recorrente && <RepeatIcon size={11} color={T.sand}/>}
+                <span style={{ fontSize:13, fontWeight:700, color:T.text }}>{g.descricao}</span>
+              </div>
+              <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>
+                {g.data} · {g.categoria}
+                {g.recorrente && <span style={{ color:T.sand }}> · {g.frequencia}</span>}
+              </div>
+            </div>
+            <div className="serif" style={{ fontSize:15, fontWeight:700, color:T.sand, flexShrink:0 }}>
+              R$ {parseFloat(g.valor||0).toFixed(2).replace(".",",")}
+            </div>
+            <IconBtn icon="✏️" size={12} color={T.textMute} onClick={() => setForm({...g})}/>
+            <IconBtn icon="🗑️" size={12} color={T.danger}   onClick={() => remover(g.id)}/>
           </div>
-          <div className="serif" style={{ fontSize:15, fontWeight:700, color:T.sand, flexShrink:0 }}>
-            R$ {parseFloat(g.valor).toFixed(2)}
-          </div>
-          <IconBtn icon="🗑️" size={13} color={T.danger} onClick={() => remover(g.id)}/>
+          {/* Botão "Registrar este período" para gastos recorrentes */}
+          {g.recorrente && (
+            <button onClick={() => registrarOcorrencia(g)} style={{
+              marginTop:8, width:"100%", padding:"6px", borderRadius:8,
+              background:T.sandBg, border:`1px solid ${T.sand}33`,
+              fontSize:11, fontWeight:700, color:T.sand,
+              display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+            }}>
+              <RepeatIcon size={11} color={T.sand}/> Registrar novo período
+            </button>
+          )}
         </Card>
       ))}
 
       {form && (
         <Modal title={form.id ? "Editar Gasto" : "Novo Gasto"} onClose={() => setForm(null)}>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <Input label="Descrição"  value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})}/>
-            <Input label="Valor (R$)" value={form.valor}     onChange={e=>setForm({...form,valor:e.target.value})} type="number"/>
-            <Input label="Data"       value={form.data}      onChange={e=>setForm({...form,data:e.target.value})}  type="date"/>
-            <Select label="Categoria" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})}
-              options={["Consulta","Vacina","Medicamento","Banho","Ração","Petshop","Outro"]}/>
-            <ModalActions onCancel={() => setForm(null)} onSave={salvar}
-              color={T.sand}
+            <Input label="Descrição"  value={form.descricao||""} onChange={e=>setForm({...form,descricao:e.target.value})}/>
+            <Input label="Valor (R$)" value={form.valor||""}     onChange={e=>setForm({...form,valor:e.target.value})} type="number"/>
+            <Input label="Data"       value={form.data||""}      onChange={e=>setForm({...form,data:e.target.value})}  type="date"/>
+            <Select label="Categoria" value={form.categoria||"Consulta"} onChange={e=>setForm({...form,categoria:e.target.value})}
+              options={["Consulta","Vacina","Medicamento","Banho","Ração","Petshop","Seguro","Plano de saúde pet","Outro"]}/>
+
+            {/* Toggle recorrente */}
+            <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer",
+              padding:"10px 12px", borderRadius:10, background:T.bgInput }}>
+              <input type="checkbox" checked={!!form.recorrente}
+                onChange={e=>setForm({...form,recorrente:e.target.checked})}
+                style={{ width:16, height:16, accentColor:T.sand }}/>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:T.text }}>Gasto recorrente</div>
+                <div style={{ fontSize:11, color:T.textMute }}>Ex: plano de saúde, mensalidades</div>
+              </div>
+            </label>
+
+            {form.recorrente && (
+              <Select label="Frequência" value={form.frequencia||"Mensal"} onChange={e=>setForm({...form,frequencia:e.target.value})}
+                options={FREQ_LABELS}/>
+            )}
+
+            <ModalActions onCancel={() => setForm(null)} onSave={salvar} color={T.sand}
               onDelete={form.id ? () => { remover(form.id); setForm(null); } : undefined}/>
           </div>
         </Modal>
