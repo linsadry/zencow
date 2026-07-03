@@ -4,9 +4,31 @@ import { Card, Pill, IconBtn, Modal, MascoteHeader, Input, Select, ModalActions 
                             from "../components/primitives.jsx";
 import { T }               from "../constants/index.js";
 import { COW_MARGARIDA }   from "../constants/images.js";
-import { compressImage }   from "../utils/image.js";
 import { parseDate, daysSince, formatDays } from "../utils/dates.js";
 import { getPetAlerts, getAllPetAlerts }     from "../utils/pets.js";
+
+/* compressImage inline — sem depender de utils/image.js */
+async function compressImage(file, maxW = 1024, quality = 0.85) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxW || h > maxW) {
+          if (w > h) { h = Math.round(h * maxW / w); w = maxW; }
+          else       { w = Math.round(w * maxW / h); h = maxW; }
+        }
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ── Ícone de pata (SVG inline) ─────────────────────────────────── */
 function PawIcon({ size = 28, color = T.blue }) {
