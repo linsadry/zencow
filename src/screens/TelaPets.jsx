@@ -1,632 +1,875 @@
-import { useState, useRef, useMemo } from "react";
-import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, MascoteHeader, Input, Select, ModalActions } from "../components/primitives.jsx";
-import AppHeader from "../components/AppHeader.jsx";
-import { compressImage } from "../utils/image.js";
+import { useState }        from "react";
+import AppHeader            from "../components/AppHeader.jsx";
+import { Card, Pill, IconBtn, Modal, MascoteHeader, Input, Select, ModalActions }
+                            from "../components/primitives.jsx";
+import { T }               from "../constants/index.js";
+import { COW_MARGARIDA }   from "../constants/images.js";
+import { compressImage }   from "../utils/image.js";
 import { parseDate, daysSince, formatDays } from "../utils/dates.js";
-import { getPetAlerts, getAllPetAlerts } from "../utils/pets.js";
-import { COW_MARGARIDA } from "../constants/images.js";
+import { getPetAlerts, getAllPetAlerts }     from "../utils/pets.js";
 
-const now = new Date();
+/* ── Ícone de pata (SVG inline) ─────────────────────────────────── */
+function PawIcon({ size = 28, color = T.blue }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke={color} strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="4.5"  cy="9.5" r="2"/>
+      <circle cx="9"    cy="4.5" r="2"/>
+      <circle cx="15"   cy="4.5" r="2"/>
+      <circle cx="19.5" cy="9.5" r="2"/>
+      <path d="M12 14c-2.5 0-4 1-4 3s2 3 4 3 4-1 4-3-1.5-3-4-3z"/>
+    </svg>
+  );
+}
 
-/* ── PetHistorico ─────────────────────────────────────────────── */
+/* ── Ícone câmera ──────────────────────────────────────────────── */
+function CameraIcon({ size = 11, color = "#fff" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  );
+}
+
+/* ── Ícone lixo ────────────────────────────────────────────────── */
+function TrashIcon({ size = 14, color = T.danger }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24"
+      fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6l-1 14H6L5 6"/>
+      <path d="M9 6V4h6v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  );
+}
+
+/* ── Cores por tipo de evento ──────────────────────────────────── */
+const TIPO_COLORS = {
+  vacina:     T.blue,
+  vermifugo:  T.rose,
+  antipulga:  T.moss,
+  consulta:   T.terra,
+  exame:      T.lav,
+  cirurgia:   T.danger,
+  banho:      T.sand,
+};
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetHistorico                                                    */
+/* ════════════════════════════════════════════════════════════════ */
 function PetHistorico({ pet }) {
   const eventos = [];
-  pet.vacinas.forEach(v => eventos.push({tipo:"💉 Vacina", titulo:v.nome, data:v.data}));
-  pet.vermifugos.forEach(v => eventos.push({tipo:"💊 Vermífugo", titulo:v.produto, data:v.data}));
-  pet.antipulgas.forEach(v => eventos.push({tipo:"🐛 Antipulga", titulo:v.produto, data:v.data}));
-  pet.consultas.forEach(v => eventos.push({tipo:"🏥 Consulta", titulo:v.motivo||"Consulta", data:v.data}));
-  pet.exames.forEach(v => eventos.push({tipo:"🔬 Exame", titulo:v.tipo, data:v.data}));
-  (pet.cirurgias||[]).forEach(v => eventos.push({tipo:"✂️ Cirurgia", titulo:v.tipo, data:v.data}));
-  pet.banhos.forEach(v => eventos.push({tipo:"🛁 Banho", titulo:"Banho", data:v.data}));
+  (pet.vacinas    || []).forEach(v => eventos.push({ tipo:"Vacina",     tipoKey:"vacina",    titulo:v.nome,     data:v.data }));
+  (pet.vermifugos || []).forEach(v => eventos.push({ tipo:"Vermífugo",  tipoKey:"vermifugo", titulo:v.produto,  data:v.data }));
+  (pet.antipulgas || []).forEach(v => eventos.push({ tipo:"Antipulga",  tipoKey:"antipulga", titulo:v.produto,  data:v.data }));
+  (pet.consultas  || []).forEach(c => eventos.push({ tipo:"Consulta",   tipoKey:"consulta",  titulo:c.motivo,   data:c.data }));
+  (pet.exames     || []).forEach(e => eventos.push({ tipo:"Exame",      tipoKey:"exame",     titulo:e.tipo,     data:e.data }));
+  (pet.cirurgias  || []).forEach(c => eventos.push({ tipo:"Cirurgia",   tipoKey:"cirurgia",  titulo:c.tipo,     data:c.data }));
+  (pet.banhos     || []).forEach(b => eventos.push({ tipo:"Banho",      tipoKey:"banho",     titulo:b.local||"", data:b.data }));
 
-  const sorted = eventos.sort((a, b) => {
-    const da = parseDate(a.data); const db = parseDate(b.data);
-    if (!da || !db) return 0; return db - da;
-  });
+  eventos.sort((a, b) => (b.data || "").localeCompare(a.data || ""));
 
-  if (sorted.length === 0) {
-    return (
-      <Card style={{padding:"24px",textAlign:"center"}}>
-        <div style={{fontSize:13,color:T.textMute,fontStyle:"italic"}}>Nenhum evento registrado ainda.</div>
-      </Card>
-    );
-  }
+  if (eventos.length === 0) return (
+    <div style={{ textAlign:"center", padding:"48px 20px", color:T.textMute }}>
+      <PawIcon size={36} color={T.borderMd}/>
+      <div style={{ marginTop:12, fontSize:13 }}>Nenhum evento registrado ainda.</div>
+    </div>
+  );
+
   return (
-    <Card style={{padding:"14px 16px"}}>
-      <div className="serif" style={{fontSize:15,fontWeight:700,marginBottom:14}}>📋 Linha do tempo</div>
-      <div style={{position:"relative",paddingLeft:18}}>
-        <div style={{position:"absolute",left:5,top:5,bottom:5,width:2,background:T.border}}/>
-        {sorted.map((ev, i) => (
-          <div key={i} style={{position:"relative",marginBottom:14}}>
-            <div style={{position:"absolute",left:-18,top:4,width:12,height:12,borderRadius:"50%",
-              background:T.blue,border:`2px solid ${T.bgCard}`}}/>
-            <div style={{fontSize:11,color:T.textMute,fontWeight:600}}>{ev.data}</div>
-            <div style={{fontSize:13,fontWeight:700,color:T.text,marginTop:1}}>
-              {ev.tipo}: {ev.titulo}
+    <div style={{ padding:"0 16px 24px" }}>
+      {eventos.map((ev, i) => {
+        const cor = TIPO_COLORS[ev.tipoKey] || T.blue;
+        return (
+          <div key={i} style={{ display:"flex", gap:12, marginBottom:12 }}>
+            {/* Linha do tempo */}
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", paddingTop:3 }}>
+              <div style={{ width:9, height:9, borderRadius:"50%", background:cor, flexShrink:0 }}/>
+              {i < eventos.length - 1 && (
+                <div style={{ flex:1, width:1, background:T.border, marginTop:4, minHeight:20 }}/>
+              )}
             </div>
+            {/* Conteúdo */}
+            <div style={{ flex:1, paddingBottom:i < eventos.length - 1 ? 8 : 0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:1 }}>
+                <span style={{ fontSize:11, fontWeight:700, color:cor, letterSpacing:.2 }}>
+                  {ev.tipo.toUpperCase()}
+                </span>
+                <span style={{ fontSize:11, color:T.textMute }}>{ev.data}</span>
+              </div>
+              <div style={{ fontSize:13, color:T.text, fontWeight:500 }}>{ev.titulo}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetGastos                                                       */
+/* ════════════════════════════════════════════════════════════════ */
+function PetGastos({ pet, setPets }) {
+  const [form, setForm] = useState(null);
+  const gastos = pet.gastos || [];
+  const total  = gastos.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+
+  const salvar = () => {
+    if (!form.descricao || !form.valor) return;
+    const item = form.id
+      ? { ...form }
+      : { ...form, id: Date.now().toString() };
+    setPets(ps => ps.map(p => p.id !== pet.id ? p : {
+      ...p, gastos: form.id
+        ? (p.gastos || []).map(g => g.id === form.id ? item : g)
+        : [...(p.gastos || []), item],
+    }));
+    setForm(null);
+  };
+
+  const remover = id => setPets(ps => ps.map(p =>
+    p.id !== pet.id ? p : { ...p, gastos:(p.gastos||[]).filter(g=>g.id!==id) }
+  ));
+
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      {/* Cabeçalho */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div className="serif" style={{ fontSize:16, fontWeight:700, color:T.text }}>Histórico</div>
+        <button onClick={() => setForm({ descricao:"", valor:"", data:"", categoria:"" })}
+          style={{
+            fontSize:13, fontWeight:700, color:T.sand,
+            background:T.sandBg, borderRadius:20, padding:"5px 14px",
+          }}>
+          + Gasto
+        </button>
+      </div>
+
+      {/* Total */}
+      {gastos.length > 0 && (
+        <Card style={{ padding:"12px 16px", marginBottom:14, background:T.sandBg, border:`1px solid ${T.sand}33` }}>
+          <div style={{ fontSize:11, color:T.textMute, fontWeight:600, letterSpacing:.3 }}>TOTAL GASTO</div>
+          <div className="serif" style={{ fontSize:26, fontWeight:700, color:T.sand, lineHeight:1.1 }}>
+            R$ {total.toFixed(2)}
+          </div>
+        </Card>
+      )}
+
+      {gastos.length === 0 && (
+        <div style={{ textAlign:"center", padding:"32px 0", color:T.textMute, fontSize:13 }}>
+          Nenhum gasto registrado.
+        </div>
+      )}
+
+      {gastos.slice().reverse().map(g => (
+        <Card key={g.id} style={{ padding:"12px 14px", marginBottom:8,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{g.descricao}</div>
+            <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>{g.data} · {g.categoria}</div>
+          </div>
+          <div className="serif" style={{ fontSize:15, fontWeight:700, color:T.sand, flexShrink:0 }}>
+            R$ {parseFloat(g.valor).toFixed(2)}
+          </div>
+          <IconBtn icon="🗑️" size={13} color={T.danger} onClick={() => remover(g.id)}/>
+        </Card>
+      ))}
+
+      {form && (
+        <Modal title={form.id ? "Editar Gasto" : "Novo Gasto"} onClose={() => setForm(null)}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <Input label="Descrição"  value={form.descricao} onChange={e=>setForm({...form,descricao:e.target.value})}/>
+            <Input label="Valor (R$)" value={form.valor}     onChange={e=>setForm({...form,valor:e.target.value})} type="number"/>
+            <Input label="Data"       value={form.data}      onChange={e=>setForm({...form,data:e.target.value})}  type="date"/>
+            <Select label="Categoria" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})}
+              options={["Consulta","Vacina","Medicamento","Banho","Ração","Petshop","Outro"]}/>
+            <ModalActions onCancel={() => setForm(null)} onSave={salvar}
+              color={T.sand}
+              onDelete={form.id ? () => { remover(form.id); setForm(null); } : undefined}/>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetGaleria                                                      */
+/* ════════════════════════════════════════════════════════════════ */
+function PetGaleria({ pet, setPets }) {
+  const [view, setView] = useState(null);
+  const fotos = pet.fotos || [];
+
+  const addFoto = async () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*";
+    input.onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const compressed = await compressImage(file);
+        const id = Date.now().toString();
+        setPets(ps => ps.map(p => p.id !== pet.id ? p : {
+          ...p, fotos:[...(p.fotos||[]), { id, src:compressed, data:new Date().toLocaleDateString("pt-BR") }],
+        }));
+      } catch { console.warn("Erro ao comprimir imagem"); }
+    };
+    input.click();
+  };
+
+  const remover = id => setPets(ps => ps.map(p =>
+    p.id !== pet.id ? p : { ...p, fotos:(p.fotos||[]).filter(f=>f.id!==id) }
+  ));
+
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div className="serif" style={{ fontSize:16, fontWeight:700, color:T.text }}>
+          Álbum de {pet.nome}
+        </div>
+        <button onClick={addFoto} style={{
+          fontSize:13, fontWeight:700, color:T.lav,
+          background:T.lavBg, borderRadius:20, padding:"5px 14px",
+        }}>
+          + Foto
+        </button>
+      </div>
+
+      {fotos.length === 0 && (
+        <div style={{ textAlign:"center", padding:"32px 0", color:T.textMute, fontSize:13 }}>
+          Adicione a primeira foto de {pet.nome}.
+        </div>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6 }}>
+        {fotos.map(f => (
+          <div key={f.id} onClick={() => setView(f)} style={{
+            aspectRatio:"1", borderRadius:10, overflow:"hidden",
+            background:T.bgInput, cursor:"pointer",
+            border:`1px solid ${T.border}`,
+          }}>
+            <img src={f.src} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
           </div>
         ))}
       </div>
-    </Card>
-  );
-}
 
-/* ── PetGastos ────────────────────────────────────────────────── */
-function PetGastos({ pet, update }) {
-  const [add, setAdd] = useState(false);
-  const [form, setForm] = useState({categoria:"Veterinário",valor:"",data:"",descricao:""});
-  const cats = ["Veterinário","Ração","Medicamentos","Banho e tosa","Acessórios","Outros"];
-
-  const adicionar = () => {
-    if (!form.valor) return;
-    update({gastos:[...(pet.gastos||[]), {id:Date.now(),...form,valor:parseFloat(form.valor)||0}]});
-    setForm({categoria:"Veterinário",valor:"",data:"",descricao:""});
-    setAdd(false);
-  };
-  const remover = id => update({gastos:pet.gastos.filter(g=>g.id!==id)});
-  const total = (pet.gastos||[]).reduce((s,g) => s+(g.valor||0), 0);
-  const porCat = {};
-  (pet.gastos||[]).forEach(g => { porCat[g.categoria]=(porCat[g.categoria]||0)+(g.valor||0); });
-
-  return (
-    <>
-      <Card style={{padding:"14px 16px",marginBottom:12,background:T.blueBg,border:`1px solid ${T.blue}22`}}>
-        <div style={{fontSize:11,color:T.textMute,fontWeight:700,letterSpacing:.3}}>TOTAL GASTO</div>
-        <div className="serif" style={{fontSize:28,fontWeight:700,color:T.blue,marginTop:2,letterSpacing:-.4}}>
-          R$ {total.toFixed(2).replace(".",",")}
-        </div>
-        {Object.keys(porCat).length > 0 && (
-          <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:10}}>
-            {Object.entries(porCat).map(([c,v]) => (
-              <div key={c} style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-                <span style={{color:T.textSub}}>{c}</span>
-                <span style={{fontWeight:700,color:T.text}}>R$ {v.toFixed(2).replace(".",",")}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      <Card style={{padding:"14px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <span className="serif" style={{fontSize:15,fontWeight:700}}>💰 Histórico</span>
-          <button onClick={() => setAdd(true)} style={{
-            fontSize:11,fontWeight:700,color:T.blue,padding:"4px 10px",borderRadius:99,
-            background:T.blueBg,border:`1px solid ${T.blue}33`}}>+ Gasto</button>
-        </div>
-        {(!pet.gastos||pet.gastos.length===0) ? (
-          <div style={{fontSize:12,color:T.textMute,padding:"6px 0",fontStyle:"italic"}}>Nenhum gasto registrado.</div>
-        ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {[...pet.gastos].reverse().map(g => (
-              <div key={g.id} style={{padding:"8px 10px",borderRadius:8,background:T.bgInput,
-                display:"flex",alignItems:"center",gap:8}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:700}}>{g.categoria}</div>
-                  <div style={{fontSize:11,color:T.textMute,marginTop:1}}>{g.data}{g.descricao&&` · ${g.descricao}`}</div>
-                </div>
-                <div style={{fontSize:13,fontWeight:800,color:T.blue}}>R$ {(g.valor||0).toFixed(2).replace(".",",")}</div>
-                <IconBtn icon="🗑️" onClick={() => remover(g.id)} size={13}/>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-      {add && (
-        <Modal title="Novo Gasto" onClose={() => setAdd(false)}>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Select label="Categoria" value={form.categoria} onChange={e=>setForm(f=>({...f,categoria:e.target.value}))} options={cats}/>
-            <Input label="Valor" type="number" value={form.valor} onChange={e=>setForm(f=>({...f,valor:e.target.value}))} placeholder="0,00"/>
-            <Input label="Data" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))} placeholder="dd/mm/aaaa"/>
-            <Input label="Descrição" value={form.descricao} onChange={e=>setForm(f=>({...f,descricao:e.target.value}))}/>
-            <ModalActions onCancel={() => setAdd(false)} onSave={adicionar} color={T.blue}/>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-/* ── PetGaleria ───────────────────────────────────────────────── */
-function PetGaleria({ pet, update }) {
-  const fileRef = useRef();
-  const [view, setView] = useState(null);
-  const handleFoto = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    const data = await compressImage(f, 1024, 0.85);
-    update({galeria:[...(pet.galeria||[]), {id:Date.now(),foto:data,data:now.toLocaleDateString("pt-BR")}]});
-  };
-  const remover = id => update({galeria:pet.galeria.filter(g=>g.id!==id)});
-
-  return (
-    <>
-      <Card style={{padding:"14px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <span className="serif" style={{fontSize:15,fontWeight:700}}>📷 Álbum de {pet.nome}</span>
-          <button onClick={() => fileRef.current.click()} style={{
-            fontSize:11,fontWeight:700,color:T.blue,padding:"4px 10px",borderRadius:99,
-            background:T.blueBg,border:`1px solid ${T.blue}33`}}>+ Foto</button>
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFoto}/>
-        {(!pet.galeria||pet.galeria.length===0) ? (
-          <div style={{textAlign:"center",padding:"24px 0",fontSize:13,color:T.textMute,fontStyle:"italic"}}>
-            Adicione fotos para criar o álbum do {pet.nome}
-          </div>
-        ) : (
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-            {pet.galeria.map(g => (
-              <button key={g.id} onClick={() => setView(g)} style={{
-                aspectRatio:"1",borderRadius:8,overflow:"hidden",
-                border:`1px solid ${T.border}`,padding:0,background:"none"}}>
-                <img src={g.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-              </button>
-            ))}
-          </div>
-        )}
-      </Card>
+      {/* Visualizador */}
       {view && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:700,
-          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}
-          onClick={() => setView(null)}>
-          <img src={view.foto} alt="" style={{maxWidth:"100%",maxHeight:"70%",borderRadius:14}}/>
-          <div style={{color:"#fff",marginTop:14,fontSize:13}}>{view.data}</div>
-          <button onClick={e=>{e.stopPropagation();remover(view.id);setView(null);}} style={{
-            marginTop:18,padding:"8px 18px",borderRadius:99,
-            background:T.dangerBg,color:T.danger,fontSize:13,fontWeight:700}}>🗑️ Remover</button>
+        <div onClick={() => setView(null)} style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,.88)",
+          zIndex:700, display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center", gap:16,
+        }}>
+          <img src={view.src} alt="" style={{
+            maxWidth:"92vw", maxHeight:"72vh",
+            objectFit:"contain", borderRadius:12,
+          }}/>
+          <div style={{ display:"flex", gap:12 }}>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,.6)" }}>{view.data}</div>
+            <button
+              onClick={e => { e.stopPropagation(); remover(view.id); setView(null); }}
+              style={{
+                fontSize:12, fontWeight:700, color:T.danger,
+                background:T.dangerBg, borderRadius:20, padding:"5px 14px",
+              }}>
+              Remover foto
+            </button>
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
-/* ── PetRotina ────────────────────────────────────────────────── */
-function PetRotina({ pet, update }) {
-  const [addBanho, setAddBanho] = useState(false);
-  const [data, setData] = useState("");
-  const adicionarBanho = () => {
-    if (!data.trim()) return;
-    update({banhos:[...pet.banhos, {id:Date.now(),data:data.trim()}]});
-    setData(""); setAddBanho(false);
+/* ════════════════════════════════════════════════════════════════ */
+/* PetRotina                                                       */
+/* ════════════════════════════════════════════════════════════════ */
+function PetRotina({ pet, setPets }) {
+  const [form, setForm] = useState(null);
+  const banhos = pet.banhos || [];
+
+  const salvar = () => {
+    if (!form.data) return;
+    const item = form.id ? { ...form } : { ...form, id:Date.now().toString() };
+    setPets(ps => ps.map(p => p.id !== pet.id ? p : {
+      ...p, banhos: form.id
+        ? (p.banhos||[]).map(b => b.id===form.id ? item : b)
+        : [...(p.banhos||[]), item],
+    }));
+    setForm(null);
   };
-  const deletar = id => update({banhos:pet.banhos.filter(b=>b.id!==id)});
-  const ultimoBanho = pet.banhos[pet.banhos.length-1];
-  const diasDesde = ultimoBanho ? daysSince(ultimoBanho.data) : null;
+
+  const remover = id => setPets(ps => ps.map(p =>
+    p.id !== pet.id ? p : { ...p, banhos:(p.banhos||[]).filter(b=>b.id!==id) }
+  ));
 
   return (
-    <>
-      <Card style={{padding:"14px 16px",marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <span className="serif" style={{fontSize:15,fontWeight:700}}>🛁 Banhos</span>
-          <button onClick={() => setAddBanho(true)} style={{
-            fontSize:11,fontWeight:700,color:T.blue,padding:"4px 10px",borderRadius:99,
-            background:T.blueBg,border:`1px solid ${T.blue}33`}}>+ Registrar</button>
+    <div style={{ padding:"0 16px 24px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div className="serif" style={{ fontSize:16, fontWeight:700, color:T.text }}>Banhos</div>
+        <button onClick={() => setForm({ data:"", local:"", observacao:"" })}
+          style={{
+            fontSize:13, fontWeight:700, color:T.blue,
+            background:T.blueBg, borderRadius:20, padding:"5px 14px",
+          }}>
+          + Registrar
+        </button>
+      </div>
+
+      {banhos.length === 0 && (
+        <div style={{ textAlign:"center", padding:"32px 0", color:T.textMute, fontSize:13 }}>
+          Nenhum banho registrado.
         </div>
-        {ultimoBanho ? (
-          <>
-            <div style={{padding:"10px 12px",background:T.blueBg,borderRadius:10,marginBottom:8}}>
-              <div style={{fontSize:11,color:T.textMute,fontWeight:700,letterSpacing:.3}}>ÚLTIMO BANHO</div>
-              <div className="serif" style={{fontSize:17,fontWeight:700,color:T.blue,marginTop:2}}>
-                {diasDesde===0?"Hoje":diasDesde===1?"Ontem":`${diasDesde} dias atrás`}
-              </div>
-              <div style={{fontSize:12,color:T.textSub,marginTop:1}}>{ultimoBanho.data}</div>
-            </div>
-            <div style={{fontSize:11,fontWeight:700,color:T.textMute,marginBottom:6}}>HISTÓRICO</div>
-            <div style={{display:"flex",flexDirection:"column",gap:4}}>
-              {[...pet.banhos].reverse().map(b => (
-                <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,
-                  padding:"6px 10px",background:T.bgInput,borderRadius:8}}>
-                  <span style={{fontSize:12,color:T.text,flex:1}}>{b.data}</span>
-                  <IconBtn icon="🗑️" onClick={() => deletar(b.id)} size={13}/>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div style={{fontSize:12,color:T.textMute,padding:"6px 0",fontStyle:"italic"}}>Nenhum banho registrado.</div>
-        )}
-      </Card>
-      {addBanho && (
-        <Modal title="Registrar Banho" onClose={() => setAddBanho(false)}>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Input label="Data" value={data} onChange={e=>setData(e.target.value)} placeholder="dd/mm/aaaa"/>
-            <ModalActions onCancel={() => setAddBanho(false)} onSave={adicionarBanho} color={T.blue}/>
+      )}
+
+      {banhos.slice().reverse().map(b => (
+        <Card key={b.id} style={{ padding:"12px 14px", marginBottom:8,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{b.data}</div>
+            {b.local && <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>{b.local}</div>}
+            {b.observacao && <div style={{ fontSize:11, color:T.textSub, marginTop:2, fontStyle:"italic" }}>{b.observacao}</div>}
+          </div>
+          <IconBtn icon="🗑️" size={13} color={T.danger} onClick={() => remover(b.id)}/>
+        </Card>
+      ))}
+
+      {form && (
+        <Modal title={form.id ? "Editar Banho" : "Registrar Banho"} onClose={() => setForm(null)}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <Input label="Data"       value={form.data}       onChange={e=>setForm({...form,data:e.target.value})}       type="date"/>
+            <Input label="Local"      value={form.local||""}  onChange={e=>setForm({...form,local:e.target.value})}/>
+            <Input label="Observação" value={form.observacao||""} onChange={e=>setForm({...form,observacao:e.target.value})}/>
+            <ModalActions onCancel={() => setForm(null)} onSave={salvar} color={T.blue}
+              onDelete={form.id ? () => { remover(form.id); setForm(null); } : undefined}/>
           </div>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 
-/* ── SaudeEditModal ───────────────────────────────────────────── */
-function SaudeEditModal({ type, item, pet, update, onClose }) {
-  const defaults = {
-    vacina:{nome:"",data:"",proxima:"",lote:""},
-    vermifugo:{produto:"",data:"",proxima:""},
-    antipulga:{produto:"",data:"",proxima:""},
-    consulta:{data:"",motivo:"",vet:"",observacoes:""},
-    exame:{tipo:"",data:"",resultado:""},
-    cirurgia:{tipo:"",data:"",observacoes:""},
-    medicamento:{nome:"",dose:"",frequencia:""},
-  };
-  const titles = {vacina:"Vacina",vermifugo:"Vermífugo",antipulga:"Antipulga",
-    consulta:"Consulta",exame:"Exame",cirurgia:"Cirurgia",medicamento:"Medicamento"};
-  const fields = {
-    vacina:[{k:"nome",l:"Nome"},{k:"data",l:"Data aplicada",p:"dd/mm/aaaa"},{k:"proxima",l:"Próxima",p:"dd/mm/aaaa"},{k:"lote",l:"Lote (opcional)"}],
-    vermifugo:[{k:"produto",l:"Produto"},{k:"data",l:"Data",p:"dd/mm/aaaa"},{k:"proxima",l:"Próxima",p:"dd/mm/aaaa"}],
-    antipulga:[{k:"produto",l:"Produto"},{k:"data",l:"Data",p:"dd/mm/aaaa"},{k:"proxima",l:"Próxima",p:"dd/mm/aaaa"}],
-    consulta:[{k:"data",l:"Data",p:"dd/mm/aaaa"},{k:"motivo",l:"Motivo"},{k:"vet",l:"Veterinário"},{k:"observacoes",l:"Observações"}],
-    exame:[{k:"tipo",l:"Tipo de exame"},{k:"data",l:"Data",p:"dd/mm/aaaa"},{k:"resultado",l:"Resultado"}],
-    cirurgia:[{k:"tipo",l:"Tipo de cirurgia"},{k:"data",l:"Data",p:"dd/mm/aaaa"},{k:"observacoes",l:"Observações"}],
-    medicamento:[{k:"nome",l:"Nome"},{k:"dose",l:"Dose"},{k:"frequencia",l:"Frequência"}],
-  };
-  const fieldKey = {vacina:"vacinas",vermifugo:"vermifugos",antipulga:"antipulgas",
-    consulta:"consultas",exame:"exames",cirurgia:"cirurgias",medicamento:"medicamentos"};
+/* ════════════════════════════════════════════════════════════════ */
+/* SaudeEditModal                                                  */
+/* ════════════════════════════════════════════════════════════════ */
+function SaudeEditModal({ type, item, pet, setPets, onClose }) {
+  const [form, setForm] = useState(item || defaultForm(type));
 
-  const [form, setForm] = useState(item || defaults[type]);
+  function defaultForm(t) {
+    const base = { data:"", proxima:"" };
+    if (t === "vacina")     return { ...base, nome:"", fabricante:"", lote:"" };
+    if (t === "vermifugo")  return { ...base, produto:"", dose:"" };
+    if (t === "antipulga")  return { ...base, produto:"", dose:"" };
+    if (t === "consulta")   return { data:"", motivo:"", veterinario:"", observacao:"" };
+    if (t === "exame")      return { data:"", tipo:"", resultado:"", arquivo:"" };
+    if (t === "cirurgia")   return { data:"", tipo:"", veterinario:"", observacao:"" };
+    if (t === "medicamento")return { data:"", nome:"", dose:"", duracao:"", observacao:"" };
+    return base;
+  }
+
+  const titles = {
+    vacina:"Vacina", vermifugo:"Vermífugo", antipulga:"Antipulga",
+    consulta:"Consulta", exame:"Exame", cirurgia:"Cirurgia", medicamento:"Medicamento",
+  };
+
+  const field = (label, key, tp="text") => (
+    <Input label={label} type={tp} value={form[key]||""}
+      onChange={e => setForm({...form,[key]:e.target.value})}/>
+  );
+
   const salvar = () => {
-    const k = fieldKey[type];
-    const list = pet[k] || [];
-    if (item) { update({[k]:list.map(x => x.id===item.id ? {...x,...form} : x)}); }
-    else      { update({[k]:[...list, {...form,id:Date.now()}]}); }
+    const id  = form.id || Date.now().toString();
+    const arr = type + "s";
+    setPets(ps => ps.map(p => {
+      if (p.id !== pet.id) return p;
+      const lista = p[arr] || [];
+      return {
+        ...p,
+        [arr]: form.id ? lista.map(x => x.id===form.id ? form : x) : [...lista, {...form,id}],
+      };
+    }));
+    onClose();
+  };
+
+  const remover = () => {
+    const arr = type + "s";
+    setPets(ps => ps.map(p =>
+      p.id !== pet.id ? p : { ...p, [arr]:(p[arr]||[]).filter(x=>x.id!==form.id) }
+    ));
     onClose();
   };
 
   return (
-    <Modal title={`${item?"Editar":"Novo"} ${titles[type]}`} onClose={onClose}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        {fields[type].map(f => (
-          <Input key={f.k} label={f.l} value={form[f.k]||""}
-            onChange={e=>setForm(x=>({...x,[f.k]:e.target.value}))}
-            placeholder={f.p}/>
-        ))}
-        <ModalActions onCancel={onClose} onSave={salvar} color={T.blue} saveLabel={item?"Salvar":"Adicionar"}/>
+    <Modal title={`${item?"Editar":"Novo"} ${titles[type]||type}`} onClose={onClose}>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {type==="vacina"      && <>{field("Nome","nome")}       {field("Data","data","date")} {field("Próxima dose","proxima","date")} {field("Fabricante","fabricante")} {field("Lote","lote")}</>}
+        {type==="vermifugo"   && <>{field("Produto","produto")} {field("Data","data","date")} {field("Próxima dose","proxima","date")} {field("Dose","dose")}</>}
+        {type==="antipulga"   && <>{field("Produto","produto")} {field("Data","data","date")} {field("Próxima aplicação","proxima","date")} {field("Dose","dose")}</>}
+        {type==="consulta"    && <>{field("Motivo","motivo")}   {field("Data","data","date")} {field("Veterinário","veterinario")} {field("Observação","observacao")}</>}
+        {type==="exame"       && <>{field("Tipo","tipo")}       {field("Data","data","date")} {field("Resultado","resultado")} {field("Arquivo","arquivo")}</>}
+        {type==="cirurgia"    && <>{field("Tipo","tipo")}       {field("Data","data","date")} {field("Veterinário","veterinario")} {field("Observação","observacao")}</>}
+        {type==="medicamento" && <>{field("Nome","nome")}       {field("Data início","data","date")} {field("Dose","dose")} {field("Duração","duracao")} {field("Observação","observacao")}</>}
+        <ModalActions onCancel={onClose} onSave={salvar}
+          onDelete={item ? remover : undefined}/>
       </div>
     </Modal>
   );
 }
 
-/* ── SaudeSection ─────────────────────────────────────────────── */
-function SaudeSection({ title, items, render, onAdd, onEdit, onDelete }) {
+/* ════════════════════════════════════════════════════════════════ */
+/* SaudeSection                                                    */
+/* ════════════════════════════════════════════════════════════════ */
+function SaudeSection({ title, items=[], type, pet, setPets, render, color=T.blue }) {
+  const [editing, setEditing] = useState(null);
+  const [adding,  setAdding]  = useState(false);
   return (
-    <Card style={{padding:"14px 16px",marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:items.length?10:0}}>
-        <span className="serif" style={{fontSize:15,fontWeight:700,color:T.text}}>{title}</span>
-        <button onClick={onAdd} style={{
-          fontSize:11,fontWeight:700,color:T.blue,padding:"4px 10px",borderRadius:99,
-          background:T.blueBg,border:`1px solid ${T.blue}33`}}>+ Adicionar</button>
+    <div style={{ marginBottom:18 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+        <div style={{ fontSize:12, fontWeight:700, color:T.textMute, letterSpacing:.4, textTransform:"uppercase" }}>
+          {title}
+        </div>
+        <button onClick={() => setAdding(true)} style={{
+          fontSize:11, fontWeight:700, color,
+          background:`${color}18`, borderRadius:20, padding:"3px 11px",
+        }}>
+          + Adicionar
+        </button>
       </div>
-      {items.length === 0 ? (
-        <div style={{fontSize:12,color:T.textMute,padding:"6px 0",fontStyle:"italic"}}>Nada registrado ainda.</div>
-      ) : (
-        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-          {items.map(item => {
-            const r = render(item);
-            return (
-              <div key={item.id} style={{padding:"8px 10px",borderRadius:8,background:T.bgInput,
-                display:"flex",alignItems:"center",gap:8}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:T.text}}>{r.primary}</div>
-                  <div style={{fontSize:11,color:T.textMute,marginTop:1}}>{r.secondary}</div>
-                  {r.next && <div style={{fontSize:11,color:T.blue,marginTop:1,fontWeight:600}}>{r.next}</div>}
-                </div>
-                <IconBtn icon="✏️" onClick={() => onEdit(item)}/>
-                <IconBtn icon="🗑️" onClick={() => onDelete(item.id)}/>
-              </div>
-            );
-          })}
+
+      {items.length === 0 && (
+        <div style={{ fontSize:12, color:T.textMute, fontStyle:"italic", paddingLeft:2 }}>
+          Nenhum registro.
         </div>
       )}
-    </Card>
-  );
-}
 
-/* ── PetSaude ─────────────────────────────────────────────────── */
-function PetSaude({ pet, update }) {
-  const [editType, setEditType] = useState(null);
-  const [editItem, setEditItem] = useState(null);
-  const openAdd  = type => { setEditItem(null); setEditType(type); };
-  const openEdit = (type, item) => { setEditItem(item); setEditType(type); };
-
-  return (
-    <>
-      <SaudeSection title="💉 Vacinas" items={pet.vacinas}
-        onAdd={() => openAdd("vacina")}
-        onEdit={i => openEdit("vacina",i)}
-        onDelete={id => update({vacinas:pet.vacinas.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.nome, secondary:`Aplicada: ${v.data}`, next:`Próxima: ${v.proxima}`})}/>
-      <SaudeSection title="💊 Vermífugo" items={pet.vermifugos}
-        onAdd={() => openAdd("vermifugo")}
-        onEdit={i => openEdit("vermifugo",i)}
-        onDelete={id => update({vermifugos:pet.vermifugos.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.produto, secondary:`Aplicado: ${v.data}`, next:`Próximo: ${v.proxima}`})}/>
-      <SaudeSection title="🐛 Antipulgas" items={pet.antipulgas}
-        onAdd={() => openAdd("antipulga")}
-        onEdit={i => openEdit("antipulga",i)}
-        onDelete={id => update({antipulgas:pet.antipulgas.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.produto, secondary:`Aplicado: ${v.data}`, next:`Próximo: ${v.proxima}`})}/>
-      <SaudeSection title="🏥 Consultas" items={pet.consultas}
-        onAdd={() => openAdd("consulta")}
-        onEdit={i => openEdit("consulta",i)}
-        onDelete={id => update({consultas:pet.consultas.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.motivo||"Consulta", secondary:`${v.data} · ${v.vet||"—"}`, next:v.observacoes})}/>
-      <SaudeSection title="🔬 Exames" items={pet.exames}
-        onAdd={() => openAdd("exame")}
-        onEdit={i => openEdit("exame",i)}
-        onDelete={id => update({exames:pet.exames.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.tipo, secondary:v.data, next:v.resultado})}/>
-      <SaudeSection title="✂️ Cirurgias" items={pet.cirurgias||[]}
-        onAdd={() => openAdd("cirurgia")}
-        onEdit={i => openEdit("cirurgia",i)}
-        onDelete={id => update({cirurgias:(pet.cirurgias||[]).filter(v=>v.id!==id)})}
-        render={v => ({primary:v.tipo, secondary:v.data, next:v.observacoes})}/>
-      <SaudeSection title="💊 Medicamentos" items={pet.medicamentos}
-        onAdd={() => openAdd("medicamento")}
-        onEdit={i => openEdit("medicamento",i)}
-        onDelete={id => update({medicamentos:pet.medicamentos.filter(v=>v.id!==id)})}
-        render={v => ({primary:v.nome, secondary:v.dose, next:v.frequencia})}/>
-      {editType && <SaudeEditModal type={editType} item={editItem} pet={pet} update={update}
-        onClose={() => {setEditType(null);setEditItem(null);}}/>}
-    </>
-  );
-}
-
-/* ── PetEditInfo ──────────────────────────────────────────────── */
-function PetEditInfo({ pet, onSave, onClose }) {
-  const [form, setForm] = useState({
-    nome:pet.nome, raca:pet.raca, sexo:pet.sexo,
-    peso:pet.peso||"", obs:pet.obs||"", nascimento:pet.nascimento||"",
-  });
-  return (
-    <Modal title="Editar Informações" onClose={onClose}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Input label="Nome" value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))}/>
-        <Input label="Raça" value={form.raca} onChange={e=>setForm(f=>({...f,raca:e.target.value}))}/>
-        <Select label="Sexo" value={form.sexo} onChange={e=>setForm(f=>({...f,sexo:e.target.value}))}
-          options={[{v:"M",l:"Macho"},{v:"F",l:"Fêmea"}]}/>
-        <Input label="Peso" value={form.peso} onChange={e=>setForm(f=>({...f,peso:e.target.value}))} placeholder="Ex: 28 kg"/>
-        <Input label="Nascimento" value={form.nascimento} onChange={e=>setForm(f=>({...f,nascimento:e.target.value}))} placeholder="dd/mm/aaaa"/>
-        <div>
-          <div style={{fontSize:11,color:T.textMute,fontWeight:700,marginBottom:5,letterSpacing:.3}}>OBSERVAÇÕES</div>
-          <textarea value={form.obs} onChange={e=>setForm(f=>({...f,obs:e.target.value}))} rows={3}
-            style={{width:"100%",padding:"10px 13px",borderRadius:10,
-              border:`1px solid ${T.border}`,background:T.bgInput,fontSize:13,color:T.text,resize:"none"}}/>
-        </div>
-        <ModalActions onCancel={onClose} onSave={() => onSave(form)} color={T.blue}/>
-      </div>
-    </Modal>
-  );
-}
-
-/* ── PetDetail ────────────────────────────────────────────────── */
-function PetDetail({ pet, setPets, onBack }) {
-  const [tab, setTab] = useState("saude");
-  const [editInfo, setEditInfo] = useState(false);
-  const fotoRef = useRef();
-  const update = patch => setPets(ps => ps.map(p => p.id===pet.id ? {...p,...patch} : p));
-  const handleFoto = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    const data = await compressImage(f, 800, 0.85);
-    update({foto:data});
-  };
-  const deletePet = () => {
-    if (window.confirm(`Remover ${pet.nome}? Esta ação é permanente.`)) {
-      setPets(ps => ps.filter(p => p.id !== pet.id));
-      onBack();
-    }
-  };
-  const alertas = getPetAlerts(pet);
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-      <AppHeader title={pet.nome} onBack={onBack}
-        rightAction={
-          <button onClick={deletePet} style={{width:34,height:34,borderRadius:10,
-            background:T.bgCard,border:`1px solid ${T.border}`,
-            display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🗑️</button>
-        }/>
-      <div style={{flex:1,overflowY:"auto",padding:"14px 16px 100px"}}>
-
-        <Card style={{padding:"18px 16px",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
-            <button onClick={() => fotoRef.current.click()} style={{
-              width:84,height:84,borderRadius:24,background:T.blueBg,
-              display:"flex",alignItems:"center",justifyContent:"center",
-              flexShrink:0,overflow:"hidden",position:"relative",
-              border:`2px solid ${T.blue}33`}}>
-              {pet.foto
-                ? <img src={pet.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                : <span style={{fontSize:38}}>🐾</span>}
-              <div style={{position:"absolute",bottom:3,right:3,width:22,height:22,
-                borderRadius:"50%",background:T.blue,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:11,color:"#fff",border:`2px solid ${T.bgCard}`}}>📷</div>
-            </button>
-            <input ref={fotoRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleFoto}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div className="serif" style={{fontSize:22,fontWeight:700,color:T.text,letterSpacing:-.3}}>{pet.nome}</div>
-              <div style={{fontSize:13,color:T.textSub,marginTop:2}}>
-                {pet.raca} · {pet.sexo==="M"?"Macho":"Fêmea"}
-              </div>
-              {pet.peso && <div style={{fontSize:12,color:T.textMute,marginTop:1}}>{pet.peso}</div>}
-              <button onClick={() => setEditInfo(true)} style={{
-                fontSize:11,fontWeight:700,color:T.blue,marginTop:8,
-                padding:"3px 10px",borderRadius:99,
-                background:T.blueBg,border:`1px solid ${T.blue}33`}}>
-                ✏️ Editar
-              </button>
-            </div>
-          </div>
-          {pet.obs && (
-            <div style={{padding:"10px 12px",background:T.bgInput,borderRadius:10,
-              fontSize:12,color:T.textSub,fontStyle:"italic"}}>
-              "{pet.obs}"
-            </div>
-          )}
-        </Card>
-
-        {alertas.length > 0 && (
-          <Card style={{padding:"12px 14px",marginBottom:14,
-            background:alertas[0].nivel==="danger"?T.dangerBg:T.alertBg,
-            border:`1px solid ${alertas[0].nivel==="danger"?T.danger:T.alert}33`}}>
-            <div style={{fontSize:12,fontWeight:800,color:T.text,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-              <img src={COW_MARGARIDA} alt="" style={{width:24,height:24,objectFit:"contain"}}/>
-              Atenção
-            </div>
-            {alertas.map((a, i) => {
-              const cor = a.nivel==="danger" ? T.danger : T.alert;
-              return (
-                <div key={i} style={{display:"flex",alignItems:"center",gap:8,
-                  padding:"5px 0",borderTop:i>0?`1px solid ${cor}22`:"none"}}>
-                  <span style={{fontSize:12,fontWeight:700,color:T.text,flex:1}}>{a.tipo}: {a.nome}</span>
-                  <Pill label={formatDays(a.dias)} color={cor} bg="#fff"/>
+      {items.map(item => {
+        const r      = render(item);
+        const alerts = getPetAlerts ? (getPetAlerts(item, type) || []) : [];
+        return (
+          <Card key={item.id} style={{ padding:"11px 14px", marginBottom:6,
+            display:"flex", alignItems:"flex-start", gap:10 }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{r.primary}</div>
+              {r.secondary && <div style={{ fontSize:11, color:T.textSub, marginTop:2 }}>{r.secondary}</div>}
+              {r.next && (
+                <div style={{
+                  fontSize:11, fontWeight:600, marginTop:4,
+                  color: alerts.length > 0 ? (alerts[0]?.nivel==="danger" ? T.danger : T.alert) : T.moss,
+                }}>
+                  {r.next}
                 </div>
-              );
-            })}
+              )}
+            </div>
+            <IconBtn icon="✏️" size={13} color={T.textMute} onClick={() => setEditing(item)}/>
           </Card>
-        )}
+        );
+      })}
 
-        <div style={{display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:14,overflowX:"auto"}}>
-          {[
-            {id:"saude",    l:"💉 Saúde"},
-            {id:"rotina",   l:"🛁 Rotina"},
-            {id:"galeria",  l:"📷 Galeria"},
-            {id:"gastos",   l:"💰 Gastos"},
-            {id:"historico",l:"📋 Histórico"},
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              flex:"1 0 auto",padding:"7px 12px",borderRadius:8,fontSize:11,fontWeight:700,
-              background:tab===t.id?T.bgCard:"transparent",
-              border:tab===t.id?`1px solid ${T.border}`:"none",
-              color:tab===t.id?T.text:T.textMute,whiteSpace:"nowrap"}}>{t.l}</button>
-          ))}
-        </div>
-
-        {tab==="saude"    && <PetSaude    pet={pet} update={update}/>}
-        {tab==="rotina"   && <PetRotina   pet={pet} update={update}/>}
-        {tab==="galeria"  && <PetGaleria  pet={pet} update={update}/>}
-        {tab==="gastos"   && <PetGastos   pet={pet} update={update}/>}
-        {tab==="historico"&& <PetHistorico pet={pet}/>}
-      </div>
-
-      {editInfo && (
-        <PetEditInfo pet={pet} onSave={patch=>{update(patch);setEditInfo(false);}} onClose={() => setEditInfo(false)}/>
+      {(adding || editing) && (
+        <SaudeEditModal
+          type={type} item={editing} pet={pet} setPets={setPets}
+          onClose={() => { setAdding(false); setEditing(null); }}/>
       )}
     </div>
   );
 }
 
-/* ── PetsList ─────────────────────────────────────────────────── */
-function PetsList({ pets, setPets, onOpen, onMenu }) {
-  const [addModal, setAddModal] = useState(false);
-  const [form, setForm] = useState({nome:"",raca:"",sexo:"M",obs:"",foto:null});
-  const fileRefAdd = useRef();
-
-  const adicionar = () => {
-    if (!form.nome.trim()) return;
-    setPets(ps => [...ps, {id:Date.now(),nome:form.nome.trim(),raca:form.raca.trim(),
-      sexo:form.sexo,nascimento:"",foto:form.foto,peso:"",obs:form.obs.trim(),
-      vacinas:[],vermifugos:[],antipulgas:[],consultas:[],exames:[],
-      medicamentos:[],banhos:[],gastos:[],galeria:[]}]);
-    setForm({nome:"",raca:"",sexo:"M",obs:"",foto:null});
-    setAddModal(false);
-  };
-  const handleFotoAdd = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    const data = await compressImage(f, 800, 0.85);
-    setForm(x => ({...x, foto:data}));
+/* ════════════════════════════════════════════════════════════════ */
+/* PetSaude                                                        */
+/* ════════════════════════════════════════════════════════════════ */
+function PetSaude({ pet, setPets }) {
+  const render = {
+    vacina:     v => ({ primary:v.nome,     secondary:`Aplicada: ${v.data}`,    next: v.proxima ? `Próxima: ${v.proxima}` : null }),
+    vermifugo:  v => ({ primary:v.produto,  secondary:`Aplicado: ${v.data}`,    next: v.proxima ? `Próximo: ${v.proxima}` : null }),
+    antipulga:  v => ({ primary:v.produto,  secondary:`Aplicado: ${v.data}`,    next: v.proxima ? `Próximo: ${v.proxima}` : null }),
+    consulta:   c => ({ primary:c.motivo,   secondary:`${c.data} · ${c.veterinario||""}`,  next:null }),
+    exame:      e => ({ primary:e.tipo,     secondary:`${e.data}`,              next:null }),
+    cirurgia:   c => ({ primary:c.tipo,     secondary:`${c.data} · ${c.veterinario||""}`,  next:null }),
+    medicamento:m => ({ primary:m.nome,     secondary:`${m.data} · ${m.dose}`,  next:null }),
   };
 
   return (
-    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-      <AppHeader title="Pets" onMenu={onMenu}/>
-      <div style={{flex:1,overflowY:"auto",padding:"14px 16px 100px"}}>
-        <MascoteHeader secao="pets" sub={`${pets.length} cachorros na família`}/>
+    <div style={{ padding:"0 16px 24px" }}>
+      <SaudeSection title="Vacinas"      type="vacina"      items={pet.vacinas||[]}      pet={pet} setPets={setPets} color={T.blue}  render={render.vacina}/>
+      <SaudeSection title="Vermífugo"    type="vermifugo"   items={pet.vermifugos||[]}   pet={pet} setPets={setPets} color={T.rose}  render={render.vermifugo}/>
+      <SaudeSection title="Antipulga"    type="antipulga"   items={pet.antipulgas||[]}   pet={pet} setPets={setPets} color={T.moss}  render={render.antipulga}/>
+      <SaudeSection title="Consultas"    type="consulta"    items={pet.consultas||[]}    pet={pet} setPets={setPets} color={T.terra} render={render.consulta}/>
+      <SaudeSection title="Exames"       type="exame"       items={pet.exames||[]}       pet={pet} setPets={setPets} color={T.lav}   render={render.exame}/>
+      <SaudeSection title="Cirurgias"    type="cirurgia"    items={pet.cirurgias||[]}    pet={pet} setPets={setPets} color={T.danger}render={render.cirurgia}/>
+      <SaudeSection title="Medicamentos" type="medicamento" items={pet.medicamentos||[]} pet={pet} setPets={setPets} color={T.sand}  render={render.medicamento}/>
+    </div>
+  );
+}
 
-        {(() => {
-          const all = getAllPetAlerts(pets);
-          if (all.length === 0) return null;
-          const danger = all.filter(a=>a.nivel==="danger").length;
-          const alert  = all.filter(a=>a.nivel==="alert").length;
-          return (
-            <Card style={{padding:"12px 14px",marginBottom:14,
-              background:T.alertBg,border:`1px solid ${T.alert}33`}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:6}}>🔔 Resumo geral</div>
-              <div style={{display:"flex",gap:8}}>
-                {danger>0&&<Pill label={`${danger} atrasado${danger>1?"s":""}`} color={T.danger} bg="#fff"/>}
-                {alert>0 &&<Pill label={`${alert} próximo${alert>1?"s":""}`}   color={T.alert}  bg="#fff"/>}
+/* ════════════════════════════════════════════════════════════════ */
+/* PetEditInfo                                                     */
+/* ════════════════════════════════════════════════════════════════ */
+function PetEditInfo({ pet, setPets, onClose }) {
+  const [form, setForm] = useState({
+    nome:    pet.nome    || "",
+    especie: pet.especie || "cachorro",
+    raca:    pet.raca    || "",
+    sexo:    pet.sexo    || "fêmea",
+    nascimento: pet.nascimento || "",
+    peso:    pet.peso    || "",
+    cor:     pet.cor     || "",
+    chip:    pet.chip    || "",
+    castrado: pet.castrado || false,
+  });
+
+  const f = (l,k,t="text") => (
+    <Input label={l} type={t} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})}/>
+  );
+
+  const salvar = () => {
+    setPets(ps => ps.map(p => p.id===pet.id ? {...p,...form} : p));
+    onClose();
+  };
+
+  return (
+    <Modal title="Editar informações" onClose={onClose}>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {f("Nome","nome")}
+        <Select label="Espécie" value={form.especie} onChange={e=>setForm({...form,especie:e.target.value})}
+          options={["cachorro","gato","ave","roedor","réptil","outro"]}/>
+        {f("Raça","raca")}
+        <Select label="Sexo" value={form.sexo} onChange={e=>setForm({...form,sexo:e.target.value})}
+          options={["fêmea","macho"]}/>
+        {f("Nascimento","nascimento","date")}
+        {f("Peso (kg)","peso","number")}
+        {f("Cor/pelagem","cor")}
+        {f("Chip","chip")}
+        <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:13, color:T.text }}>
+          <input type="checkbox" checked={form.castrado}
+            onChange={e=>setForm({...form,castrado:e.target.checked})}/>
+          Castrado(a)
+        </label>
+        <ModalActions onCancel={onClose} onSave={salvar}/>
+      </div>
+    </Modal>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetDetail                                                       */
+/* ════════════════════════════════════════════════════════════════ */
+function PetDetail({ pet, setPets, onBack }) {
+  const [aba,       setAba]       = useState("saude");
+  const [editInfo,  setEditInfo]  = useState(false);
+  const [editFoto,  setEditFoto]  = useState(false);
+
+  const update = patch => setPets(ps => ps.map(p => p.id===pet.id ? {...p,...patch} : p));
+
+  const deletePet = () => {
+    if (!window.confirm(`Remover ${pet.nome}?`)) return;
+    setPets(ps => ps.filter(p => p.id !== pet.id));
+    onBack();
+  };
+
+  const idade = pet.nascimento
+    ? (() => {
+        const d = daysSince(parseDate(pet.nascimento));
+        return d < 365 ? `${Math.floor(d/30)}m` : `${Math.floor(d/365)}a`;
+      })()
+    : null;
+
+  const ABAS = [
+    { id:"saude",     l:"Saúde"    },
+    { id:"rotina",    l:"Rotina"   },
+    { id:"galeria",   l:"Galeria"  },
+    { id:"gastos",    l:"Gastos"   },
+    { id:"historico", l:"Histórico"},
+  ];
+
+  const alerts = (() => {
+    try { return getPetAlerts ? (getPetAlerts(pet) || []) : []; }
+    catch { return []; }
+  })();
+
+  const urgentes = alerts.filter(a => a.nivel==="danger").length;
+  const proximos  = alerts.filter(a => a.nivel==="alert").length;
+
+  return (
+    <div style={{ height:"100%", display:"flex", flexDirection:"column" }}>
+      <AppHeader
+        title={pet.nome}
+        onBack={onBack}
+        rightAction={
+          <button onClick={deletePet} style={{
+            padding:"6px 8px", borderRadius:8,
+            background:T.dangerBg, display:"flex", alignItems:"center",
+          }}>
+            <TrashIcon size={13}/>
+          </button>
+        }
+      />
+
+      <div style={{ flex:1, overflowY:"auto" }}>
+        {/* Card de perfil */}
+        <div style={{ padding:"16px 16px 0" }}>
+          <Card style={{ padding:"16px", marginBottom:14 }}>
+            <div style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
+              {/* Foto */}
+              <div style={{ position:"relative", flexShrink:0 }}>
+                <div style={{
+                  width:76, height:76, borderRadius:20,
+                  overflow:"hidden", background:T.blueBg,
+                  border:`1px solid ${T.border}`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                  {pet.foto
+                    ? <img src={pet.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    : <PawIcon size={32} color={T.blue}/>
+                  }
+                </div>
+                <button
+                  onClick={async () => {
+                    const input = document.createElement("input");
+                    input.type="file"; input.accept="image/*";
+                    input.onchange = async e => {
+                      const file=e.target.files[0]; if(!file) return;
+                      try { const c=await compressImage(file); update({foto:c}); } catch {}
+                    };
+                    input.click();
+                  }}
+                  style={{
+                    position:"absolute", bottom:-4, right:-4,
+                    width:24, height:24, borderRadius:"50%",
+                    background:T.blue,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    boxShadow:"0 1px 4px rgba(0,0,0,.2)",
+                  }}>
+                  <CameraIcon size={11}/>
+                </button>
               </div>
-            </Card>
-          );
-        })()}
 
-        <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
-          {pets.map((p, idx) => {
-            const alertas = getPetAlerts(p);
-            const urgentes = alertas.filter(a=>a.nivel==="danger").length;
-            const proximos = alertas.filter(a=>a.nivel==="alert").length;
-            return (
-              <button key={p.id} onClick={() => onOpen(p.id)} style={{
-                display:"flex",alignItems:"center",gap:14,
-                padding:"14px 16px",borderRadius:18,
-                background:T.bgCard,border:`1px solid ${T.border}`,
-                textAlign:"left"}}>
-                <div style={{width:62,height:62,borderRadius:20,background:T.blueBg,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:30,flexShrink:0,overflow:"hidden",
-                  border:`1.5px solid ${T.blue}33`}}>
-                  {p.foto
-                    ? <img src={p.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    : <span>🐾</span>}
+              {/* Info */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <div className="serif" style={{fontSize:20,fontWeight:700,color:T.text,lineHeight:1.1}}>
+                  {pet.nome}
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-                    <span className="serif" style={{fontSize:18,fontWeight:700,color:T.text}}>{p.nome}</span>
-                    <span style={{fontSize:10,color:T.textMute,fontWeight:700}}>#{idx+1}</span>
-                  </div>
-                  <div style={{fontSize:12,color:T.textSub,marginTop:1}}>
-                    {p.raca}{p.sexo?` · ${p.sexo==="M"?"♂":"♀"}`:""}
-                  </div>
-                  <div style={{display:"flex",gap:6,marginTop:6}}>
-                    {urgentes>0&&<Pill label={`⚠️ ${urgentes}`} color={T.danger} bg={T.dangerBg}/>}
-                    {proximos>0&&<Pill label={`⏰ ${proximos}`} color={T.alert}  bg={T.alertBg}/>}
-                    {urgentes===0&&proximos===0&&<Pill label="em dia" color={T.moss} bg={T.mossBg}/>}
-                  </div>
+                <div style={{fontSize:12,color:T.textSub,marginTop:2}}>
+                  {pet.raca || pet.especie}
+                  {pet.sexo && ` · ${pet.sexo==="macho" ? "♂" : "♀"}`}
+                  {idade && ` · ${idade}`}
+                  {pet.castrado && " · castrado(a)"}
                 </div>
-                <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
-                  <path d="M1 1L7 7L1 13" stroke={T.textMute} strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
+                {pet.peso && (
+                  <div style={{fontSize:11,color:T.textMute,marginTop:2}}>{pet.peso} kg</div>
+                )}
+                {/* Alertas */}
+                {(urgentes > 0 || proximos > 0) && (
+                  <div style={{display:"flex",gap:5,marginTop:6,flexWrap:"wrap"}}>
+                    {urgentes>0 && <Pill label={`${urgentes} atrasado${urgentes>1?"s":""}`} color={T.danger} bg={T.dangerBg}/>}
+                    {proximos>0 && <Pill label={`${proximos} próximo${proximos>1?"s":""}`}  color={T.alert}  bg={T.alertBg}/>}
+                  </div>
+                )}
+              </div>
+
+              {/* Editar */}
+              <button onClick={() => setEditInfo(true)} style={{
+                fontSize:12, fontWeight:700, color:T.blue,
+                background:T.blueBg, borderRadius:20, padding:"5px 12px", flexShrink:0,
+              }}>
+                Editar
               </button>
-            );
-          })}
+            </div>
+          </Card>
         </div>
 
-        <button onClick={() => setAddModal(true)} style={{
-          width:"100%",padding:"13px",borderRadius:12,
-          background:T.blue,color:"#fff",fontSize:14,fontWeight:700,
-          boxShadow:"0 2px 12px rgba(106,143,170,.3)"}}>+ Adicionar Pet</button>
+        {/* Tabs */}
+        <div style={{
+          display:"flex", gap:0, overflowX:"auto", padding:"0 16px 0",
+          borderBottom:`1px solid ${T.border}`, marginBottom:0,
+        }}>
+          {ABAS.map(a => (
+            <button key={a.id} onClick={() => setAba(a.id)} style={{
+              padding:"9px 14px", fontSize:12, fontWeight:700,
+              color:       aba===a.id ? T.blue     : T.textMute,
+              borderBottom:`2px solid ${aba===a.id ? T.blue : "transparent"}`,
+              whiteSpace:  "nowrap",
+              transition:  "color .15s ease",
+            }}>
+              {a.l}
+            </button>
+          ))}
+        </div>
+
+        {/* Conteúdo das abas */}
+        <div style={{ paddingTop:16 }}>
+          {aba==="saude"     && <PetSaude    pet={pet} setPets={setPets}/>}
+          {aba==="rotina"    && <PetRotina   pet={pet} setPets={setPets}/>}
+          {aba==="galeria"   && <PetGaleria  pet={pet} setPets={setPets}/>}
+          {aba==="gastos"    && <PetGastos   pet={pet} setPets={setPets}/>}
+          {aba==="historico" && <PetHistorico pet={pet}/>}
+        </div>
       </div>
 
-      {addModal && (
-        <Modal title="Novo Pet" onClose={() => setAddModal(false)}>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <button onClick={() => fileRefAdd.current.click()} style={{
-                width:62,height:62,borderRadius:18,background:T.blueBg,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                flexShrink:0,overflow:"hidden",
-                border:`2px dashed ${form.foto?T.blue:T.borderMd}`}}>
-                {form.foto
-                  ? <img src={form.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  : <span style={{fontSize:24}}>🐾</span>}
-              </button>
-              <input ref={fileRefAdd} type="file" accept="image/*" style={{display:"none"}} onChange={handleFotoAdd}/>
-              <div style={{fontSize:12,color:T.textMute}}>Toque para foto</div>
+      {editInfo && (
+        <PetEditInfo pet={pet} setPets={setPets} onClose={() => setEditInfo(false)}/>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetsList                                                        */
+/* ════════════════════════════════════════════════════════════════ */
+function PetsList({ pets, setPets, onOpen, onMenu }) {
+  const safePets = Array.isArray(pets) ? pets : [];
+  const [adding, setAdding] = useState(false);
+  const [form,   setForm]   = useState({ nome:"", especie:"cachorro", raca:"", sexo:"fêmea" });
+
+  const addPet = () => {
+    if (!form.nome.trim()) return;
+    const novo = {
+      id: Date.now().toString(),
+      nome:form.nome, especie:form.especie, raca:form.raca, sexo:form.sexo,
+      vacinas:[], vermifugos:[], antipulgas:[], consultas:[],
+      exames:[], cirurgias:[], medicamentos:[], banhos:[], gastos:[], fotos:[],
+    };
+    setPets(ps => [...(Array.isArray(ps) ? ps : []), novo]);
+    setForm({ nome:"", especie:"cachorro", raca:"", sexo:"fêmea" });
+    setAdding(false);
+  };
+
+  /* Resumo de alertas — wrapped em try-catch para o bug pets is not defined */
+  const alertSummary = (() => {
+    try {
+      const all     = getAllPetAlerts(safePets);
+      const danger  = (all || []).filter(a => a.nivel==="danger").length;
+      const alert   = (all || []).filter(a => a.nivel==="alert").length;
+      return { all: all || [], danger, alert };
+    } catch (e) {
+      console.warn("ZenCow pet alerts error:", e);
+      return { all:[], danger:0, alert:0 };
+    }
+  })();
+
+  return (
+    <div style={{ height:"100%", display:"flex", flexDirection:"column" }}>
+      <AppHeader title="Pets" onMenu={onMenu}/>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 80px" }}>
+        <MascoteHeader secao="pets"/>
+
+        {/* Resumo de alertas */}
+        {(alertSummary.danger > 0 || alertSummary.alert > 0) && (
+          <Card style={{
+            padding:"12px 16px", marginBottom:16,
+            background:T.alertBg, border:`1px solid ${T.alert}33`,
+          }}>
+            <div style={{ fontSize:12, fontWeight:700, color:T.text, marginBottom:6 }}>
+              Alertas da fazenda
             </div>
-            <Input label="Nome" value={form.nome} onChange={e=>setForm(f=>({...f,nome:e.target.value}))}/>
-            <Input label="Raça" value={form.raca} onChange={e=>setForm(f=>({...f,raca:e.target.value}))}/>
-            <Select label="Sexo" value={form.sexo} onChange={e=>setForm(f=>({...f,sexo:e.target.value}))}
-              options={[{v:"M",l:"Macho"},{v:"F",l:"Fêmea"}]}/>
-            <ModalActions onCancel={() => setAddModal(false)} onSave={adicionar} saveLabel="Adicionar" color={T.blue}/>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {alertSummary.danger > 0 && (
+                <Pill
+                  label={`${alertSummary.danger} atrasado${alertSummary.danger>1?"s":""}`}
+                  color={T.danger} bg="#fff"/>
+              )}
+              {alertSummary.alert > 0 && (
+                <Pill
+                  label={`${alertSummary.alert} próximo${alertSummary.alert>1?"s":""}`}
+                  color={T.alert} bg="#fff"/>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Lista de pets */}
+        {safePets.length === 0 && (
+          <div style={{ textAlign:"center", padding:"48px 0" }}>
+            <PawIcon size={48} color={T.borderMd}/>
+            <div style={{ fontSize:15, color:T.textMute, marginTop:12 }}>
+              Seus pets aparecerão aqui
+            </div>
+          </div>
+        )}
+
+        {safePets.map(pet => {
+          const alerts  = (() => { try { return getPetAlerts ? (getPetAlerts(pet)||[]) : []; } catch { return []; } })();
+          const urgentes = alerts.filter(a => a.nivel==="danger").length;
+          const proximos  = alerts.filter(a => a.nivel==="alert").length;
+
+          return (
+            <Card key={pet.id} className="zc-card" style={{ marginBottom:10, overflow:"hidden" }}>
+              <button onClick={() => onOpen(pet.id)} style={{
+                display:"flex", alignItems:"center", gap:14,
+                padding:"14px 16px", width:"100%", textAlign:"left",
+              }}>
+                {/* Foto / avatar */}
+                <div style={{
+                  width:56, height:56, borderRadius:16, overflow:"hidden",
+                  background:T.blueBg, border:`1px solid ${T.border}`,
+                  flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                  {pet.foto
+                    ? <img src={pet.foto} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    : <PawIcon size={24} color={T.blue}/>
+                  }
+                </div>
+
+                {/* Info */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div className="serif" style={{fontSize:17,fontWeight:700,color:T.text,lineHeight:1.1}}>
+                    {pet.nome}
+                  </div>
+                  <div style={{fontSize:12,color:T.textSub,marginTop:2}}>
+                    {pet.raca || pet.especie}
+                    {pet.sexo && (pet.sexo==="macho" ? " · ♂" : " · ♀")}
+                  </div>
+                  <div style={{display:"flex",gap:5,marginTop:5,flexWrap:"wrap"}}>
+                    {urgentes>0
+                      ? <Pill label={`${urgentes} atrasado${urgentes>1?"s":""}`} color={T.danger} bg={T.dangerBg}/>
+                      : proximos>0
+                        ? <Pill label={`${proximos} próximo${proximos>1?"s":""}`} color={T.alert} bg={T.alertBg}/>
+                        : <Pill label="em dia" color={T.moss} bg={T.mossBg}/>
+                    }
+                  </div>
+                </div>
+
+                {/* Chevron */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke={T.textMute} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </button>
+            </Card>
+          );
+        })}
+
+        {/* Botão adicionar pet */}
+        <button onClick={() => setAdding(true)} style={{
+          width:"100%", padding:"13px", borderRadius:14, marginTop:6,
+          border:`1.5px dashed ${T.blue}55`, background:T.blueBg,
+          fontSize:13, fontWeight:700, color:T.blue,
+          display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Adicionar Pet
+        </button>
+      </div>
+
+      {adding && (
+        <Modal title="Novo Pet" onClose={() => setAdding(false)}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <Input label="Nome" value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Nome do pet"/>
+            <Select label="Espécie" value={form.especie} onChange={e=>setForm({...form,especie:e.target.value})}
+              options={["cachorro","gato","ave","roedor","réptil","outro"]}/>
+            <Input label="Raça" value={form.raca} onChange={e=>setForm({...form,raca:e.target.value})}/>
+            <Select label="Sexo" value={form.sexo} onChange={e=>setForm({...form,sexo:e.target.value})}
+              options={["fêmea","macho"]}/>
+            <ModalActions onCancel={() => setAdding(false)} onSave={addPet} color={T.blue}/>
           </div>
         </Modal>
       )}
@@ -634,11 +877,28 @@ function PetsList({ pets, setPets, onOpen, onMenu }) {
   );
 }
 
-/* ── TelaPets (root) ──────────────────────────────────────────── */
-export default function TelaPets({ pets=[], setPets, petOpenId, setPetOpenId, onMenu }) {
+/* ════════════════════════════════════════════════════════════════ */
+/* TelaPets — export principal                                     */
+/* ════════════════════════════════════════════════════════════════ */
+export default function TelaPets({ pets = [], setPets, petOpenId, setPetOpenId, onMenu }) {
+  /* Garante array mesmo se vier null do estado pai */
+  const safePets = Array.isArray(pets) ? pets : [];
+
   if (petOpenId) {
-    const pet = pets.find(p => p.id === petOpenId);
-    if (pet) return <PetDetail pet={pet} setPets={setPets} onBack={() => setPetOpenId(null)}/>;
+    const pet = safePets.find(p => p.id === petOpenId);
+    if (pet) return (
+      <PetDetail
+        pet={pet}
+        setPets={setPets}
+        onBack={() => setPetOpenId(null)}/>
+    );
   }
-  return <PetsList pets={pets} setPets={setPets} onOpen={id=>setPetOpenId(id)} onMenu={onMenu}/>;
+
+  return (
+    <PetsList
+      pets={safePets}
+      setPets={setPets}
+      onOpen={id => setPetOpenId(id)}
+      onMenu={onMenu}/>
+  );
 }
