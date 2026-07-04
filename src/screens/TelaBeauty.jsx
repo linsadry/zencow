@@ -8,6 +8,9 @@ const BEAUTY_CATS    = ["Limpeza","Tônico","Sérum","Hidratante","Protetor Sola
 const BEAUTY_ROUTINE = ["Manhã","Noite","Ambos"];
 const SKIN_CONDS     = ["Normal","Oleosa","Seca","Acneica","Sensível","Opaca","Radiante"];
 
+const fmtPreco = v => `R$ ${Number(v).toFixed(2).replace(".", ",")}`;
+const getStatus = p => p.status || "tenho";
+
 export default function TelaBeauty({ produtos, setProdutos, diario, setDiario, onMenu }) {
   const [tab, setTab] = useState("rotina");
 
@@ -41,9 +44,10 @@ export default function TelaBeauty({ produtos, setProdutos, diario, setDiario, o
 
 /* ── RotinaTab ────────────────────────────────────────────────── */
 function RotinaTab({ produtos }) {
+  const owned = produtos.filter(p => getStatus(p)==="tenho");
   const sort = items => [...items].sort((a,b) => (a.ordem||99)-(b.ordem||99));
-  const manha = sort(produtos.filter(p => p.rotina==="Manhã" || p.rotina==="Ambos"));
-  const noite  = sort(produtos.filter(p => p.rotina==="Noite"  || p.rotina==="Ambos"));
+  const manha = sort(owned.filter(p => p.rotina==="Manhã" || p.rotina==="Ambos"));
+  const noite  = sort(owned.filter(p => p.rotina==="Noite"  || p.rotina==="Ambos"));
 
   const Block = ({ titulo, emoji, items }) => (
     <Card style={{ padding:"14px 16px",marginBottom:12 }}>
@@ -95,13 +99,35 @@ function ProdutosTab({ produtos, setProdutos }) {
   const [addModal, setAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [filtro,   setFiltro]   = useState("Todos");
+  const [subTab,   setSubTab]   = useState("tenho"); // "tenho" | "wishlist"
 
-  const filtered = filtro==="Todos"     ? produtos
-    : filtro==="Favoritos" ? produtos.filter(p => p.favorito)
-    : produtos.filter(p => p.categoria===filtro);
+  const tenhoCount    = produtos.filter(p => getStatus(p)==="tenho").length;
+  const wishlistCount = produtos.filter(p => getStatus(p)==="wishlist").length;
+
+  let base = produtos.filter(p => getStatus(p)===subTab);
+  let filtered = filtro==="Todos"     ? base
+    : filtro==="Favoritos" ? base.filter(p => p.favorito)
+    : base.filter(p => p.categoria===filtro);
+
+  if (subTab==="wishlist") {
+    filtered = [...filtered].sort((a,b) => (a.preco ?? Infinity) - (b.preco ?? Infinity));
+  }
 
   return (
     <>
+      <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:12 }}>
+        {[
+          { id:"tenho",    l:`🧴 Tenho (${tenhoCount})`       },
+          { id:"wishlist", l:`🎁 Wishlist (${wishlistCount})` },
+        ].map(t => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} style={{
+            flex:1,padding:"7px 10px",borderRadius:8,fontSize:12,fontWeight:700,
+            background: subTab===t.id ? T.bgCard : "transparent",
+            border:     subTab===t.id ? `1px solid ${T.border}` : "none",
+            color:      subTab===t.id ? T.text : T.textMute }}>{t.l}</button>
+        ))}
+      </div>
+
       <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:4 }}>
         {["Todos","Favoritos",...BEAUTY_CATS].map(c => (
           <button key={c} onClick={() => setFiltro(c)} style={{
@@ -115,7 +141,9 @@ function ProdutosTab({ produtos, setProdutos }) {
 
       {filtered.length===0 ? (
         <Card style={{ padding:"24px",textAlign:"center" }}>
-          <div style={{ fontSize:13,color:T.textMute }}>Nenhum produto aqui</div>
+          <div style={{ fontSize:13,color:T.textMute }}>
+            {subTab==="wishlist" ? "Nenhum item na wishlist" : "Nenhum produto aqui"}
+          </div>
         </Card>
       ) : (
         <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:14 }}>
@@ -135,8 +163,9 @@ function ProdutosTab({ produtos, setProdutos }) {
                 <div style={{ fontSize:11,color:T.textMute,marginTop:2 }}>
                   {p.marca&&`${p.marca} · `}{p.categoria}
                 </div>
-                <div style={{ display:"flex",gap:4,marginTop:4 }}>
-                  <Pill label={p.rotina} color={T.sand} bg={T.sandBg}/>
+                <div style={{ display:"flex",gap:4,marginTop:4,flexWrap:"wrap" }}>
+                  {subTab==="tenho" && <Pill label={p.rotina} color={T.sand} bg={T.sandBg}/>}
+                  {p.preco!=null && <Pill label={fmtPreco(p.preco)} color={T.terra} bg={T.terraBg}/>}
                   {p.favorito&&<Pill label="❤️" color={T.sand} bg={T.sandBg}/>}
                 </div>
               </div>
@@ -151,10 +180,12 @@ function ProdutosTab({ produtos, setProdutos }) {
       <button onClick={() => setAddModal(true)} style={{
         width:"100%",padding:"13px",borderRadius:12,
         background:T.sand,color:"#fff",fontSize:14,fontWeight:700,
-        boxShadow:"0 2px 12px rgba(196,169,106,.3)" }}>+ Novo Produto</button>
+        boxShadow:"0 2px 12px rgba(196,169,106,.3)" }}>
+        + Novo Produto
+      </button>
 
       {addModal && (
-        <ProdutoModal onClose={() => setAddModal(false)}
+        <ProdutoModal defaultStatus={subTab} onClose={() => setAddModal(false)}
           onSave={p => { setProdutos(ps => [...ps, {id:Date.now(),...p}]); setAddModal(false); }}/>
       )}
       {editItem && (
@@ -226,20 +257,36 @@ function DiarioTab({ diario, setDiario }) {
 }
 
 /* ── ProdutoModal ─────────────────────────────────────────────── */
-function ProdutoModal({ produto, onClose, onSave, onDelete }) {
+function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(produto || {
     nome:"",marca:"",categoria:"Hidratante",rotina:"Ambos",ordem:1,foto:null,favorito:false,
+    status: defaultStatus || "tenho", preco:"",
   });
   const fileRef = useRef();
   const handleFoto = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  const foto = await compressImage(f, 600, 0.85);
-  setForm(x => ({ ...x, foto }));
-};
+    const f = e.target.files[0]; if (!f) return;
+    const foto = await compressImage(f, 600, 0.85);
+    setForm(x => ({ ...x, foto }));
+  };
+
+  const status = form.status || "tenho";
 
   return (
     <Modal title={produto ? "Editar Produto" : "Novo Produto"} onClose={onClose}>
       <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+        <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3 }}>
+          {[
+            { id:"tenho",    l:"🧴 Tenho"    },
+            { id:"wishlist", l:"🎁 Wishlist" },
+          ].map(t => (
+            <button key={t.id} type="button" onClick={() => setForm(f=>({...f,status:t.id}))} style={{
+              flex:1,padding:"8px 10px",borderRadius:8,fontSize:12,fontWeight:700,
+              background: status===t.id ? T.bgCard : "transparent",
+              border:     status===t.id ? `1px solid ${T.border}` : "none",
+              color:      status===t.id ? T.text : T.textMute }}>{t.l}</button>
+          ))}
+        </div>
+
         <button onClick={() => fileRef.current.click()} style={{
           width:"100%",height:130,borderRadius:14,overflow:"hidden",
           background:T.sandBg,border:`2px dashed ${form.foto ? T.sand : T.borderMd}`,
@@ -257,18 +304,29 @@ function ProdutoModal({ produto, onClose, onSave, onDelete }) {
         <Input label="Marca (opcional)" value={form.marca||""} onChange={e=>setForm(f=>({...f,marca:e.target.value}))}/>
 
         <div style={{ display:"flex",gap:10 }}>
-          <div style={{ flex:2 }}>
+          <div style={{ flex: status==="tenho" ? 2 : 1 }}>
             <Select label="Categoria" value={form.categoria}
               onChange={e=>setForm(f=>({...f,categoria:e.target.value}))} options={BEAUTY_CATS}/>
           </div>
           <div style={{ flex:1 }}>
-            <Input label="Ordem" type="number" value={form.ordem||1}
-              onChange={e=>setForm(f=>({...f,ordem:parseInt(e.target.value)||1}))}/>
+            <Input label="Preço (opcional)" type="number" value={form.preco ?? ""}
+              placeholder="R$"
+              onChange={e=>setForm(f=>({...f,preco: e.target.value===""? "" : parseFloat(e.target.value)}))}/>
           </div>
         </div>
 
-        <Select label="Rotina" value={form.rotina}
-          onChange={e=>setForm(f=>({...f,rotina:e.target.value}))} options={BEAUTY_ROUTINE}/>
+        {status==="tenho" && (
+          <div style={{ display:"flex",gap:10 }}>
+            <div style={{ flex:2 }}>
+              <Select label="Rotina" value={form.rotina||"Ambos"}
+                onChange={e=>setForm(f=>({...f,rotina:e.target.value}))} options={BEAUTY_ROUTINE}/>
+            </div>
+            <div style={{ flex:1 }}>
+              <Input label="Ordem" type="number" value={form.ordem||1}
+                onChange={e=>setForm(f=>({...f,ordem:parseInt(e.target.value)||1}))}/>
+            </div>
+          </div>
+        )}
 
         <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",
           padding:"10px 12px",borderRadius:10,background:T.bgInput,border:`1px solid ${T.border}` }}>
@@ -277,8 +335,10 @@ function ProdutoModal({ produto, onClose, onSave, onDelete }) {
           <span style={{ fontSize:13,fontWeight:600 }}>❤️ Favorito</span>
         </label>
 
-        <ModalActions onCancel={onClose} onSave={() => { if(!form.nome.trim()) return; onSave(form); }}
-          onDelete={onDelete} color={T.sand}/>
+        <ModalActions onCancel={onClose} onSave={() => {
+          if(!form.nome.trim()) return;
+          onSave({ ...form, preco: form.preco===""? null : form.preco });
+        }} onDelete={onDelete} color={T.sand}/>
       </div>
     </Modal>
   );
@@ -292,10 +352,10 @@ function DiarioModal({ entrada, onClose, onSave, onDelete }) {
   });
   const fileRef = useRef();
   const handleFoto = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  const foto = await compressImage(f, 600, 0.85);
-  setForm(x => ({ ...x, foto }));
-};
+    const f = e.target.files[0]; if (!f) return;
+    const foto = await compressImage(f, 600, 0.85);
+    setForm(x => ({ ...x, foto }));
+  };
 
   return (
     <Modal title={entrada ? "Editar Entrada" : "Nova Entrada"} onClose={onClose}>
