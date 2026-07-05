@@ -192,8 +192,8 @@ export default function ZenCow() {
   const setManutencoes    = mk("manutencoes");
   const setMemorias       = mk("memorias");
   const setPetOpenId      = id => setState(prev => ({ ...prev, petOpenId: id }));
-  /* No desktop a sidebar é sempre visível; hamburger é no-op */
-  const onMenu = () => { if (isMobile) setMenuOpen(true); };
+  /* No desktop a sidebar é sempre visível; não existe botão de menu pra abrir */
+  const onMenu = isMobile ? () => setMenuOpen(true) : null;
 
   /* ── Loading ─────────────────────────────────────────────── */
   if (loading) return (
