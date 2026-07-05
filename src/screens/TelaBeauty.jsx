@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx";
+import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader, SvgIcon } from "../components/primitives.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 
@@ -22,15 +22,18 @@ export default function TelaBeauty({ produtos, setProdutos, diario, setDiario, o
 
         <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:14 }}>
           {[
-            { id:"rotina",   l:"✨ Rotina"                           },
-            { id:"produtos", l:`🧴 Produtos (${produtos.length})`    },
-            { id:"diario",   l:`📓 Diário (${diario.length})`        },
+            { id:"rotina",   icon:"sparkle",  label:"Rotina"                        },
+            { id:"produtos", icon:"bottle",   label:`Produtos (${produtos.length})` },
+            { id:"diario",   icon:"notebook", label:`Diário (${diario.length})`     },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex:1,padding:"7px 10px",borderRadius:8,fontSize:12,fontWeight:700,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:5,
               background: tab===t.id ? T.bgCard : "transparent",
               border:     tab===t.id ? `1px solid ${T.border}` : "none",
-              color:      tab===t.id ? T.text : T.textMute }}>{t.l}</button>
+              color:      tab===t.id ? T.text : T.textMute }}>
+              <SvgIcon name={t.icon} size={13}/>{t.label}
+            </button>
           ))}
         </div>
 
@@ -49,9 +52,11 @@ function RotinaTab({ produtos }) {
   const manha = sort(owned.filter(p => p.rotina==="Manhã" || p.rotina==="Ambos"));
   const noite  = sort(owned.filter(p => p.rotina==="Noite"  || p.rotina==="Ambos"));
 
-  const Block = ({ titulo, emoji, items }) => (
+  const Block = ({ titulo, icon, items }) => (
     <Card style={{ padding:"14px 16px",marginBottom:12 }}>
-      <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:12 }}>{emoji} {titulo}</div>
+      <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:12,display:"flex",alignItems:"center",gap:7 }}>
+        <SvgIcon name={icon} size={15}/>{titulo}
+      </div>
       {items.length===0 ? (
         <div style={{ fontSize:12,color:T.textMute,fontStyle:"italic" }}>
           Adicione produtos com rotina "{titulo}" para ver aqui
@@ -65,7 +70,7 @@ function RotinaTab({ produtos }) {
                 background:T.sandBg,display:"flex",alignItems:"center",justifyContent:"center" }}>
                 {p.foto
                   ? <img src={p.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-                  : <span style={{ fontSize:18 }}>🧴</span>}
+                  : <SvgIcon name="bottle" size={16} color={T.sand}/>}
               </div>
               <div style={{ flex:1,minWidth:0 }}>
                 <div style={{ fontSize:12,fontWeight:700,color:T.text,
@@ -82,10 +87,12 @@ function RotinaTab({ produtos }) {
 
   return (
     <>
-      <Block titulo="Manhã" emoji="☀️" items={manha}/>
-      <Block titulo="Noite"  emoji="🌙" items={noite}/>
+      <Block titulo="Manhã" icon="sun"  items={manha}/>
+      <Block titulo="Noite" icon="moon" items={noite}/>
       <Card style={{ padding:"12px 14px",background:T.sandBg,border:`1px solid ${T.sand}22` }}>
-        <div style={{ fontSize:11,color:T.textMute,fontWeight:700 }}>💡 DICA</div>
+        <div style={{ fontSize:11,color:T.textMute,fontWeight:700,display:"flex",alignItems:"center",gap:5 }}>
+          <SvgIcon name="bulb" size={13}/>DICA
+        </div>
         <div style={{ fontSize:12,color:T.textSub,marginTop:4 }}>
           Cadastre produtos, defina rotina e ordem numérica para organizá-los automaticamente aqui.
         </div>
@@ -117,14 +124,17 @@ function ProdutosTab({ produtos, setProdutos }) {
     <>
       <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:12 }}>
         {[
-          { id:"tenho",    l:`🧴 Tenho (${tenhoCount})`       },
-          { id:"wishlist", l:`🎁 Wishlist (${wishlistCount})` },
+          { id:"tenho",    icon:"bottle", label:`Tenho (${tenhoCount})`       },
+          { id:"wishlist", icon:"gift",   label:`Wishlist (${wishlistCount})` },
         ].map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
             flex:1,padding:"7px 10px",borderRadius:8,fontSize:12,fontWeight:700,
+            display:"flex",alignItems:"center",justifyContent:"center",gap:5,
             background: subTab===t.id ? T.bgCard : "transparent",
             border:     subTab===t.id ? `1px solid ${T.border}` : "none",
-            color:      subTab===t.id ? T.text : T.textMute }}>{t.l}</button>
+            color:      subTab===t.id ? T.text : T.textMute }}>
+            <SvgIcon name={t.icon} size={13}/>{t.label}
+          </button>
         ))}
       </div>
 
@@ -155,7 +165,7 @@ function ProdutosTab({ produtos, setProdutos }) {
                 background:T.sandBg,display:"flex",alignItems:"center",justifyContent:"center" }}>
                 {p.foto
                   ? <img src={p.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-                  : <span style={{ fontSize:24 }}>🧴</span>}
+                  : <SvgIcon name="bottle" size={22} color={T.sand}/>}
               </div>
               <div style={{ flex:1,minWidth:0 }}>
                 <div style={{ fontSize:13,fontWeight:700,color:T.text,
@@ -163,10 +173,10 @@ function ProdutosTab({ produtos, setProdutos }) {
                 <div style={{ fontSize:11,color:T.textMute,marginTop:2 }}>
                   {p.marca&&`${p.marca} · `}{p.categoria}
                 </div>
-                <div style={{ display:"flex",gap:4,marginTop:4,flexWrap:"wrap" }}>
+                <div style={{ display:"flex",gap:4,marginTop:4,flexWrap:"wrap",alignItems:"center" }}>
                   {subTab==="tenho" && <Pill label={p.rotina} color={T.sand} bg={T.sandBg}/>}
                   {p.preco!=null && <Pill label={fmtPreco(p.preco)} color={T.terra} bg={T.terraBg}/>}
-                  {p.favorito&&<Pill label="❤️" color={T.sand} bg={T.sandBg}/>}
+                  {p.favorito && <Pill label={<SvgIcon name="heart" size={10} color={T.sand}/>} color={T.sand} bg={T.sandBg}/>}
                 </div>
               </div>
               <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
@@ -214,7 +224,9 @@ function DiarioTab({ diario, setDiario }) {
       <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:14 }}>
         {sorted.length===0 ? (
           <Card style={{ padding:"30px",textAlign:"center" }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>📓</div>
+            <div style={{ marginBottom:8,display:"flex",justifyContent:"center" }}>
+              <SvgIcon name="notebook" size={32} color={T.textMute}/>
+            </div>
             <div style={{ fontSize:13,color:T.textMute }}>Comece a registrar sua pele</div>
           </Card>
         ) : sorted.map(e => (
@@ -276,14 +288,17 @@ function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
       <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
         <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3 }}>
           {[
-            { id:"tenho",    l:"🧴 Tenho"    },
-            { id:"wishlist", l:"🎁 Wishlist" },
+            { id:"tenho",    icon:"bottle", label:"Tenho"    },
+            { id:"wishlist", icon:"gift",   label:"Wishlist" },
           ].map(t => (
             <button key={t.id} type="button" onClick={() => setForm(f=>({...f,status:t.id}))} style={{
               flex:1,padding:"8px 10px",borderRadius:8,fontSize:12,fontWeight:700,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:5,
               background: status===t.id ? T.bgCard : "transparent",
               border:     status===t.id ? `1px solid ${T.border}` : "none",
-              color:      status===t.id ? T.text : T.textMute }}>{t.l}</button>
+              color:      status===t.id ? T.text : T.textMute }}>
+              <SvgIcon name={t.icon} size={13}/>{t.label}
+            </button>
           ))}
         </div>
 
@@ -294,7 +309,7 @@ function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
           {form.foto
             ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
             : <div style={{ textAlign:"center",color:T.textMute }}>
-                <div style={{ fontSize:28 }}>📷</div>
+                <SvgIcon name="camera" size={28} color={T.textMute}/>
                 <div style={{ fontSize:11,fontWeight:600,marginTop:4 }}>Foto do produto</div>
               </div>}
         </button>
@@ -332,7 +347,9 @@ function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
           padding:"10px 12px",borderRadius:10,background:T.bgInput,border:`1px solid ${T.border}` }}>
           <input type="checkbox" checked={form.favorito}
             onChange={e=>setForm(f=>({...f,favorito:e.target.checked}))}/>
-          <span style={{ fontSize:13,fontWeight:600 }}>❤️ Favorito</span>
+          <span style={{ fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6 }}>
+            <SvgIcon name="heart" size={13} color={T.sand}/>Favorito
+          </span>
         </label>
 
         <ModalActions onCancel={onClose} onSave={() => {
@@ -371,7 +388,7 @@ function DiarioModal({ entrada, onClose, onSave, onDelete }) {
           {form.foto
             ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
             : <div style={{ textAlign:"center",color:T.textMute }}>
-                <div style={{ fontSize:22 }}>📷</div>
+                <SvgIcon name="camera" size={22} color={T.textMute}/>
                 <div style={{ fontSize:11,fontWeight:600,marginTop:4 }}>Selfie da pele (opcional)</div>
               </div>}
         </button>
