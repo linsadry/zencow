@@ -2,7 +2,7 @@ import { T } from "../constants/index.js";
 import { MASCOTES } from "../constants/mascotes.js";
 
 /* ── SVG icon helper (mapeia emojis → SVG) ─────────────────────── */
-function SvgIcon({ name, size = 14, color = "currentColor" }) {
+export function SvgIcon({ name, size = 14, color = "currentColor" }) {
   const emojiMap = { "🗑️":"trash", "✏️":"pencil", "📷":"camera", "🔔":"bell",
                      "🐾":"paw",   "⚠️":"alert",  "➕":"plus",   "✕":"x"    };
   const key = emojiMap[name] || name;
@@ -34,6 +34,21 @@ function SvgIcon({ name, size = 14, color = "currentColor" }) {
     chevR:  <polyline points="9 18 15 12 9 6"/>,
     eye:    <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                <circle cx="12" cy="12" r="3"/></>,
+    sparkle:<path d="M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.963 0L14.063 8.5A2 2 0 0015.5 9.937l6.135 1.581a.5.5 0 010 .964L15.5 14.063a2 2 0 00-1.437 1.437l-1.582 6.135a.5.5 0 01-.963 0z"/>,
+    bottle: <><rect x="9" y="2" width="6" height="3" rx="1"/>
+               <path d="M8 5h8v3a2 2 0 002 2v9a3 3 0 01-3 3H9a3 3 0 01-3-3v-9a2 2 0 002-2V5z"/></>,
+    notebook:<><path d="M4 4a2 2 0 012-2h11a1 1 0 011 1v18a1 1 0 01-1 1H6a2 2 0 01-2-2V4z"/>
+               <path d="M8 2v20"/></>,
+    sun:    <><circle cx="12" cy="12" r="4"/>
+               <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></>,
+    moon:   <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>,
+    bulb:   <><path d="M9 18h6"/><path d="M10 22h4"/>
+               <path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.2 1 2.05V17h6v-.25c0-.85.4-1.55 1-2.05A7 7 0 0012 2z"/></>,
+    heart:  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 10-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>,
+    gift:   <><rect x="3" y="8" width="18" height="4" rx="1"/>
+               <path d="M12 8v13"/>
+               <path d="M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/>
+               <path d="M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 010 5"/></>,
   };
 
   if (!defs[key]) {
