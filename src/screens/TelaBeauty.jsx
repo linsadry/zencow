@@ -208,6 +208,7 @@ function ProdutosTab({ produtos, setProdutos }) {
 }
 
 /* ── DiarioTab ────────────────────────────────────────────────── */
+/* ── DiarioTab ────────────────────────────────────────────────── */
 function DiarioTab({ diario, setDiario }) {
   const [addModal, setAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -219,6 +220,8 @@ function DiarioTab({ diario, setDiario }) {
   };
   const sorted = [...diario].sort((a,b) => parseDate(b.data) - parseDate(a.data));
 
+  const getFotos = e => e.fotos || (e.foto ? { frente: e.foto } : {});
+
   return (
     <>
       <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:14 }}>
@@ -229,25 +232,33 @@ function DiarioTab({ diario, setDiario }) {
             </div>
             <div style={{ fontSize:13,color:T.textMute }}>Comece a registrar sua pele</div>
           </Card>
-        ) : sorted.map(e => (
-          <button key={e.id} onClick={() => setEditItem({...e})} style={{
-            display:"flex",gap:12,padding:"12px 14px",borderRadius:12,
-            background:T.bgCard,border:`1px solid ${T.border}`,textAlign:"left" }}>
-            <div style={{ flex:1,minWidth:0 }}>
-              <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
-                <span style={{ fontSize:11,fontWeight:700,color:T.textMute }}>{e.data}</span>
-                {e.condicao&&<Pill label={e.condicao} color={T.sand} bg={T.sandBg}/>}
+        ) : sorted.map(e => {
+          const fotos = getFotos(e);
+          const thumbs = [fotos.frente, fotos.lateralE, fotos.lateralD].filter(Boolean);
+          return (
+            <button key={e.id} onClick={() => setEditItem({...e})} style={{
+              display:"flex",gap:12,padding:"12px 14px",borderRadius:12,
+              background:T.bgCard,border:`1px solid ${T.border}`,textAlign:"left" }}>
+              <div style={{ flex:1,minWidth:0 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
+                  <span style={{ fontSize:11,fontWeight:700,color:T.textMute }}>{e.data}</span>
+                  {e.condicao&&<Pill label={e.condicao} color={T.sand} bg={T.sandBg}/>}
+                </div>
+                {e.notas&&<div style={{ fontSize:12,color:T.textSub,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{e.notas}</div>}
               </div>
-              {e.notas&&<div style={{ fontSize:12,color:T.textSub,
-                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{e.notas}</div>}
-            </div>
-            {e.foto&&(
-              <div style={{ width:44,height:44,borderRadius:10,overflow:"hidden",flexShrink:0 }}>
-                <img src={e.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-              </div>
-            )}
-          </button>
-        ))}
+              {thumbs.length>0 && (
+                <div style={{ display:"flex",gap:4,flexShrink:0 }}>
+                  {thumbs.map((src,i) => (
+                    <div key={i} style={{ width:44,height:44,borderRadius:10,overflow:"hidden" }}>
+                      <img src={src} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <button onClick={() => setAddModal(true)} style={{
@@ -267,7 +278,6 @@ function DiarioTab({ diario, setDiario }) {
     </>
   );
 }
-
 /* ── ProdutoModal ─────────────────────────────────────────────── */
 function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(produto || {
@@ -362,17 +372,41 @@ function ProdutoModal({ produto, defaultStatus, onClose, onSave, onDelete }) {
 }
 
 /* ── DiarioModal ──────────────────────────────────────────────── */
+/* ── DiarioModal ──────────────────────────────────────────────── */
 function DiarioModal({ entrada, onClose, onSave, onDelete }) {
+  const initialFotos = entrada
+    ? (entrada.fotos || (entrada.foto ? { frente: entrada.foto } : {}))
+    : {};
   const [form, setForm] = useState(entrada || {
     data: new Date().toLocaleDateString("pt-BR"),
-    condicao:"Normal", notas:"", foto:null,
+    condicao:"Normal", notas:"",
   });
-  const fileRef = useRef();
-  const handleFoto = async e => {
+  const [fotos, setFotos] = useState(initialFotos);
+
+  const refFrente  = useRef();
+  const refLatE    = useRef();
+  const refLatD    = useRef();
+
+  const handleFoto = (slot) => async e => {
     const f = e.target.files[0]; if (!f) return;
     const foto = await compressImage(f, 600, 0.85);
-    setForm(x => ({ ...x, foto }));
+    setFotos(x => ({ ...x, [slot]: foto }));
   };
+
+  const FotoSlot = ({ slot, label, inputRef }) => (
+    <div style={{ flex:1 }}>
+      <button onClick={() => inputRef.current.click()} style={{
+        width:"100%",height:90,borderRadius:12,overflow:"hidden",
+        background:T.sandBg,border:`2px dashed ${fotos[slot] ? T.sand : T.borderMd}`,
+        display:"flex",alignItems:"center",justifyContent:"center" }}>
+        {fotos[slot]
+          ? <img src={fotos[slot]} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+          : <SvgIcon name="camera" size={20} color={T.textMute}/>}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFoto(slot)}/>
+      <div style={{ fontSize:10,color:T.textMute,fontWeight:600,textAlign:"center",marginTop:4 }}>{label}</div>
+    </div>
+  );
 
   return (
     <Modal title={entrada ? "Editar Entrada" : "Nova Entrada"} onClose={onClose}>
@@ -381,18 +415,14 @@ function DiarioModal({ entrada, onClose, onSave, onDelete }) {
         <Select label="Condição da pele" value={form.condicao}
           onChange={e=>setForm(f=>({...f,condicao:e.target.value}))} options={SKIN_CONDS}/>
 
-        <button onClick={() => fileRef.current.click()} style={{
-          width:"100%",height:110,borderRadius:12,overflow:"hidden",
-          background:T.sandBg,border:`2px dashed ${form.foto ? T.sand : T.borderMd}`,
-          display:"flex",alignItems:"center",justifyContent:"center" }}>
-          {form.foto
-            ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-            : <div style={{ textAlign:"center",color:T.textMute }}>
-                <SvgIcon name="camera" size={22} color={T.textMute}/>
-                <div style={{ fontSize:11,fontWeight:600,marginTop:4 }}>Selfie da pele (opcional)</div>
-              </div>}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFoto}/>
+        <div>
+          <div style={{ fontSize:11,color:T.textMute,fontWeight:700,marginBottom:6,letterSpacing:.3 }}>FOTOS (OPCIONAL)</div>
+          <div style={{ display:"flex",gap:8 }}>
+            <FotoSlot slot="frente"  label="Frente"    inputRef={refFrente}/>
+            <FotoSlot slot="lateralE" label="Lateral E" inputRef={refLatE}/>
+            <FotoSlot slot="lateralD" label="Lateral D" inputRef={refLatD}/>
+          </div>
+        </div>
 
         <div>
           <div style={{ fontSize:11,color:T.textMute,fontWeight:700,marginBottom:5,letterSpacing:.3 }}>NOTAS</div>
@@ -403,7 +433,9 @@ function DiarioModal({ entrada, onClose, onSave, onDelete }) {
               fontSize:13,color:T.text,resize:"none" }}/>
         </div>
 
-        <ModalActions onCancel={onClose} onSave={() => onSave(form)} onDelete={onDelete} color={T.sand}/>
+        <ModalActions onCancel={onClose}
+          onSave={() => onSave({ ...form, fotos, foto: undefined })}
+          onDelete={onDelete} color={T.sand}/>
       </div>
     </Modal>
   );
