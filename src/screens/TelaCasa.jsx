@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx";
+import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader, SvgIcon } from "../components/primitives.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 import { COW_ESTRELA } from "../constants/images.js";
@@ -12,7 +12,6 @@ const CATEGORIAS = ["Reforma","Jardinagem","Pomar","Energia solar","Cercas","Pai
 export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompras, manutencoes=[], setManutencoes, onMenu }) {
   const [tab, setTab] = useState("casa");
 
-  // casaTarefas = tarefas, sitioProjetos = manutencoes
   return (
     <div style={{ display:"flex",flexDirection:"column",height:"100%" }}>
       <AppHeader title="Casa & Sítio" onMenu={onMenu}/>
@@ -20,12 +19,15 @@ export default function TelaCasa({ tarefas=[], setTarefas, compras=[], setCompra
         <MascoteHeader secao="casa" sub="Hoje e o sonho de amanhã"/>
 
         <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:14 }}>
-          {[{ id:"casa",l:"🏡 Casa"},{id:"sitio",l:"🌳 Sítio"}].map((t) => (
+          {[{ id:"casa",icon:"home",label:"Casa"},{id:"sitio",icon:"tree",label:"Sítio"}].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex:1,padding:"7px 0",borderRadius:8,fontSize:13,fontWeight:700,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:6,
               background: tab === t.id ? T.bgCard : "transparent",
               border:     tab === t.id ? `1px solid ${T.border}` : "none",
-              color:      tab === t.id ? T.text : T.textMute }}>{t.l}</button>
+              color:      tab === t.id ? T.text : T.textMute }}>
+              <SvgIcon name={t.icon} size={14}/>{t.label}
+            </button>
           ))}
         </div>
 
@@ -54,7 +56,6 @@ function CasaTab({ tarefas, setTarefas }) {
 
   return (
     <>
-      {/* Input rápido */}
       <div style={{ display:"flex",gap:8,marginBottom:14 }}>
         <input value={nova} onChange={(e) => setNova(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
@@ -67,15 +68,15 @@ function CasaTab({ tarefas, setTarefas }) {
           boxShadow:"0 2px 10px rgba(95,122,74,.35)" }}>+</button>
       </div>
 
-      {/* Pendentes */}
       <div style={{ fontSize:11,color:T.textMute,fontWeight:700,
         textTransform:"uppercase",letterSpacing:.8,marginBottom:8 }}>
         Pendentes · {pendentes.length}
       </div>
       <Card style={{ marginBottom:14 }}>
         {pendentes.length === 0 ? (
-          <div style={{ padding:"16px",fontSize:13,color:T.textMute,textAlign:"center",fontStyle:"italic" }}>
-            Casa em ordem 🏡
+          <div style={{ padding:"16px",fontSize:13,color:T.textMute,textAlign:"center",fontStyle:"italic",
+            display:"flex",alignItems:"center",justifyContent:"center",gap:6 }}>
+            <SvgIcon name="home" size={14} color={T.textMute}/>Casa em ordem
           </div>
         ) : pendentes.map((t, i) => (
           <div key={t.id} style={{ display:"flex",alignItems:"center",gap:11,
@@ -84,13 +85,12 @@ function CasaTab({ tarefas, setTarefas }) {
             <button onClick={() => toggle(t.id)} style={{ width:22,height:22,borderRadius:"50%",flexShrink:0,
               border:`2px solid ${T.borderMd}`,background:"transparent" }}/>
             <span style={{ flex:1,fontSize:13,fontWeight:500 }}>{t.texto}</span>
-            <IconBtn icon="✏️" onClick={() => setEdit({ ...t })}/>
-            <IconBtn icon="🗑️" onClick={() => deletar(t.id)}/>
+            <IconBtn icon="pencil" onClick={() => setEdit({ ...t })}/>
+            <IconBtn icon="trash" onClick={() => deletar(t.id)}/>
           </div>
         ))}
       </Card>
 
-      {/* Concluídas */}
       {concluidas.length > 0 && (
         <>
           <div style={{ fontSize:11,color:T.textMute,fontWeight:700,
@@ -110,14 +110,13 @@ function CasaTab({ tarefas, setTarefas }) {
                   </svg>
                 </button>
                 <span style={{ flex:1,fontSize:13,fontWeight:500,textDecoration:"line-through" }}>{t.texto}</span>
-                <IconBtn icon="🗑️" onClick={() => deletar(t.id)}/>
+                <IconBtn icon="trash" onClick={() => deletar(t.id)}/>
               </div>
             ))}
           </Card>
         </>
       )}
 
-      {/* Modal editar */}
       {edit && (
         <Modal title="Editar Tarefa" onClose={() => setEdit(null)}>
           <input value={edit.texto} onChange={(e) => setEdit((m) => ({ ...m, texto: e.target.value }))}
@@ -142,7 +141,6 @@ function SitioTab({ projetos, setProjetos }) {
 
   return (
     <>
-      {/* Banner do sítio */}
       <Card style={{ padding:"14px 16px",marginBottom:14,background:T.mossBg,border:`1px solid ${T.moss}22` }}>
         <div style={{ display:"flex",alignItems:"center",gap:12 }}>
           <img src={COW_ESTRELA} alt="" style={{ width:50,height:50,objectFit:"contain" }}/>
@@ -158,7 +156,6 @@ function SitioTab({ projetos, setProjetos }) {
         </div>
       </Card>
 
-      {/* Projetos por fase */}
       {FASES.map((fase) => {
         const itens = projetos.filter((p) => p.fase === fase);
         if (itens.length === 0) return null;
@@ -185,8 +182,8 @@ function SitioTab({ projetos, setProjetos }) {
                     <span style={{ flex:1,fontSize:13,fontWeight:600,
                       textDecoration: p.feita ? "line-through" : "none" }}>{p.texto}</span>
                     {p.categoria && <Pill label={p.categoria} color={T.moss} bg={T.mossBg}/>}
-                    <IconBtn icon="✏️" onClick={() => setEdit({ ...p })}/>
-                    <IconBtn icon="🗑️" onClick={() => deletar(p.id)}/>
+                    <IconBtn icon="pencil" onClick={() => setEdit({ ...p })}/>
+                    <IconBtn icon="trash" onClick={() => deletar(p.id)}/>
                   </div>
                   {p.fotos && p.fotos.length > 0 && (
                     <div style={{ display:"flex",gap:6,marginTop:10,overflowX:"auto" }}>
@@ -247,7 +244,6 @@ function ProjetoModal({ projeto, onClose, onSave, onDelete }) {
           </div>
         </div>
 
-        {/* Fotos da evolução */}
         <div>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5 }}>
             <div style={{ fontSize:11,color:T.textMute,fontWeight:700,letterSpacing:.3 }}>FOTOS DA EVOLUÇÃO</div>
