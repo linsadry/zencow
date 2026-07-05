@@ -1,6 +1,5 @@
 import { T } from "../constants/index.js";
 import { LOGO } from "../constants/images.js";
-
 export default function AppHeader({
   title,
   showLogo = false,
@@ -14,7 +13,7 @@ export default function AppHeader({
       padding: "13px 18px 11px", background: T.bgPage,
       borderBottom: `1px solid ${T.border}`, flexShrink: 0,
     }}>
-      {/* Botão esquerdo — voltar ou menu */}
+      {/* Botão esquerdo — voltar, menu, ou espaçador */}
       {onBack ? (
         <button
           onClick={onBack}
@@ -28,7 +27,7 @@ export default function AppHeader({
             <path d="M7 1L1 6.5L7 12" stroke={T.textSub} strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
-      ) : (
+      ) : onMenu ? (
         <button
           onClick={onMenu}
           style={{
@@ -43,8 +42,9 @@ export default function AppHeader({
             <rect y="10" width="6" height="2" rx="1" fill={T.textSub} />
           </svg>
         </button>
+      ) : (
+        <div style={{ width: 34 }} />
       )}
-
       {/* Título central */}
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         {showLogo && (
@@ -65,7 +65,6 @@ export default function AppHeader({
           {title}
         </span>
       </div>
-
       {/* Ação direita ou espaçador */}
       {rightAction || <div style={{ width: 34 }} />}
     </div>
