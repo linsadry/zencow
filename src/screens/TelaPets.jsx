@@ -70,6 +70,20 @@ function TrashIcon({ size = 14, color = T.danger }) {
   );
 }
 
+/* ── Ícone balança (SVG inline) ──────────────────────────────────── */
+function ScaleIcon({ size = 13, color = "currentColor" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="3" x2="12" y2="21"/>
+      <path d="M5 7l-3 8a4 4 0 008 0z"/>
+      <path d="M19 7l-3 8a4 4 0 008 0z"/>
+      <path d="M5 7h14"/>
+      <path d="M12 3l-3 4h6z"/>
+    </svg>
+  );
+}
+
 /* ── Cores por tipo de evento ──────────────────────────────────── */
 const TIPO_COLORS = {
   vacina:     T.blue,
@@ -307,6 +321,92 @@ function PetGastos({ pet, setPets }) {
             )}
 
             <ModalActions onCancel={() => setForm(null)} onSave={salvar} color={T.sand}
+              onDelete={form.id ? () => { remover(form.id); setForm(null); } : undefined}/>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetPeso — acompanhamento de peso                                */
+/* ════════════════════════════════════════════════════════════════ */
+function PetPeso({ pet, setPets }) {
+  const [form, setForm] = useState(null);
+  const pesos = pet.pesos || [];
+
+  const ordenados = [...pesos].sort((a,b) => (parseDate(b.data)||0) - (parseDate(a.data)||0));
+  const atual    = ordenados[0];
+  const anterior = ordenados[1];
+  const delta    = atual && anterior ? (parseFloat(atual.valor) - parseFloat(anterior.valor)) : null;
+
+  const salvar = () => {
+    if (!form.data || !form.valor) return;
+    const item = { ...form, id: form.id || Date.now().toString() };
+    setPets(ps => ps.map(p => p.id !== pet.id ? p : {
+      ...p, pesos: form.id
+        ? (p.pesos||[]).map(x => x.id===form.id ? item : x)
+        : [...(p.pesos||[]), item],
+    }));
+    setForm(null);
+  };
+
+  const remover = id => setPets(ps => ps.map(p =>
+    p.id !== pet.id ? p : { ...p, pesos:(p.pesos||[]).filter(x=>x.id!==id) }
+  ));
+
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div className="serif" style={{ fontSize:16, fontWeight:700, color:T.text }}>Peso</div>
+        <button onClick={() => setForm({ data:new Date().toLocaleDateString("pt-BR"), valor:"" })}
+          style={{ fontSize:13, fontWeight:700, color:T.blue, background:T.blueBg, borderRadius:20, padding:"5px 14px" }}>
+          + Registrar
+        </button>
+      </div>
+
+      {atual && (
+        <Card style={{ padding:"14px 16px", marginBottom:14, background:T.blueBg, border:`1px solid ${T.blue}33` }}>
+          <div style={{ fontSize:11, color:T.textMute, fontWeight:600, letterSpacing:.3 }}>PESO ATUAL</div>
+          <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
+            <div className="serif" style={{ fontSize:28, fontWeight:700, color:T.blue, lineHeight:1.1 }}>
+              {atual.valor} kg
+            </div>
+            {delta !== null && delta !== 0 && (
+              <span style={{ fontSize:12, fontWeight:700, color: delta > 0 ? T.terra : T.moss }}>
+                {delta > 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)} kg
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize:11, color:T.textMute, marginTop:2 }}>Registrado em {atual.data}</div>
+        </Card>
+      )}
+
+      {ordenados.length === 0 && (
+        <div style={{ textAlign:"center", padding:"32px 0", color:T.textMute, fontSize:13 }}>
+          Nenhum registro de peso ainda.
+        </div>
+      )}
+
+      {ordenados.map(p => (
+        <Card key={p.id} style={{ padding:"11px 14px", marginBottom:8,
+          display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{p.valor} kg</div>
+            <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>{p.data}</div>
+          </div>
+          <IconBtn icon="✏️" size={12} color={T.textMute} onClick={() => setForm({...p})}/>
+          <IconBtn icon="🗑️" size={12} color={T.danger}   onClick={() => remover(p.id)}/>
+        </Card>
+      ))}
+
+      {form && (
+        <Modal title={form.id ? "Editar Registro" : "Novo Registro de Peso"} onClose={() => setForm(null)}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            <Input label="Data" value={form.data||""} onChange={e=>setForm({...form,data:e.target.value})} placeholder="dd/mm/aaaa"/>
+            <Input label="Peso (kg)" value={form.valor||""} onChange={e=>setForm({...form,valor:e.target.value})} type="number"/>
+            <ModalActions onCancel={() => setForm(null)} onSave={salvar} color={T.blue}
               onDelete={form.id ? () => { remover(form.id); setForm(null); } : undefined}/>
           </div>
         </Modal>
@@ -628,19 +728,22 @@ function PetSaude({ pet, setPets }) {
 /* ════════════════════════════════════════════════════════════════ */
 function PetEditInfo({ pet, setPets, onClose }) {
   const [form, setForm] = useState({
-    nome:    pet.nome    || "",
-    especie: pet.especie || "cachorro",
-    raca:    pet.raca    || "",
-    sexo:    pet.sexo    || "fêmea",
-    nascimento: pet.nascimento || "",
-    peso:    pet.peso    || "",
-    cor:     pet.cor     || "",
-    chip:    pet.chip    || "",
-    castrado: pet.castrado || false,
+    nome:        pet.nome        || "",
+    apelido:     pet.apelido     || "",
+    especie:     pet.especie     || "cachorro",
+    raca:        pet.raca        || "",
+    sexo:        pet.sexo        || "fêmea",
+    nascimento:  pet.nascimento  || "",
+    dataAdocao:  pet.dataAdocao  || "",
+    temperamento:pet.temperamento|| "",
+    cor:         pet.cor         || "",
+    chip:        pet.chip        || "",
+    castrado:    pet.castrado    || false,
   });
 
-  const f = (l,k,t="text") => (
-    <Input label={l} type={t} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})}/>
+  const f = (l,k,t="text",placeholder) => (
+    <Input label={l} type={t} value={form[k]||""} placeholder={placeholder}
+      onChange={e=>setForm({...form,[k]:e.target.value})}/>
   );
 
   const salvar = () => {
@@ -652,13 +755,15 @@ function PetEditInfo({ pet, setPets, onClose }) {
     <Modal title="Editar informações" onClose={onClose}>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         {f("Nome","nome")}
+        {f("Apelido (opcional)","apelido")}
         <Select label="Espécie" value={form.especie} onChange={e=>setForm({...form,especie:e.target.value})}
           options={["cachorro","gato","ave","roedor","réptil","outro"]}/>
         {f("Raça","raca")}
         <Select label="Sexo" value={form.sexo} onChange={e=>setForm({...form,sexo:e.target.value})}
           options={["fêmea","macho"]}/>
-        {f("Nascimento","nascimento","date")}
-        {f("Peso (kg)","peso","number")}
+        {f("Nascimento","nascimento","text","dd/mm/aaaa")}
+        {f("Data de adoção (opcional)","dataAdocao","text","dd/mm/aaaa")}
+        {f("Temperamento","temperamento","text","ex: dócil, energético, territorialista")}
         {f("Cor/pelagem","cor")}
         {f("Chip","chip")}
         <label style={{ display:"flex", alignItems:"center", gap:10, fontSize:13, color:T.text }}>
@@ -688,16 +793,26 @@ function PetDetail({ pet, setPets, onBack }) {
     onBack();
   };
 
+  /* fix: daysSince já faz o parse internamente — não passar parseDate(pet.nascimento) aqui */
   const idade = pet.nascimento
     ? (() => {
-        const d = daysSince(parseDate(pet.nascimento));
+        const d = daysSince(pet.nascimento);
+        if (d === null) return null;
         return d < 365 ? `${Math.floor(d/30)}m` : `${Math.floor(d/365)}a`;
       })()
     : null;
 
+  const pesoAtual = (() => {
+    const lista = pet.pesos || [];
+    if (lista.length === 0) return pet.peso || null; // fallback pra dado legado
+    const ordenados = [...lista].sort((a,b) => (parseDate(b.data)||0) - (parseDate(a.data)||0));
+    return ordenados[0].valor;
+  })();
+
   const ABAS = [
     { id:"saude",     l:"Saúde"    },
     { id:"rotina",    l:"Rotina"   },
+    { id:"peso",      l:"Peso"     },
     { id:"galeria",   l:"Galeria"  },
     { id:"gastos",    l:"Gastos"   },
     { id:"historico", l:"Histórico"},
@@ -769,6 +884,11 @@ function PetDetail({ pet, setPets, onBack }) {
               <div style={{ flex:1, minWidth:0 }}>
                 <div className="serif" style={{fontSize:20,fontWeight:700,color:T.text,lineHeight:1.1}}>
                   {pet.nome}
+                  {pet.apelido && (
+                    <span style={{ fontSize:13, fontWeight:500, color:T.textMute, fontStyle:"italic" }}>
+                      {" "}"{pet.apelido}"
+                    </span>
+                  )}
                 </div>
                 <div style={{fontSize:12,color:T.textSub,marginTop:2}}>
                   {pet.raca || pet.especie}
@@ -776,8 +896,15 @@ function PetDetail({ pet, setPets, onBack }) {
                   {idade && ` · ${idade}`}
                   {pet.castrado && " · castrado(a)"}
                 </div>
-                {pet.peso && (
-                  <div style={{fontSize:11,color:T.textMute,marginTop:2}}>{pet.peso} kg</div>
+                {pet.temperamento && (
+                  <div style={{fontSize:11,color:T.textMute,marginTop:3,fontStyle:"italic"}}>
+                    {pet.temperamento}
+                  </div>
+                )}
+                {pesoAtual && (
+                  <div style={{fontSize:11,color:T.textMute,marginTop:3,display:"flex",alignItems:"center",gap:4}}>
+                    <ScaleIcon size={11} color={T.textMute}/>{pesoAtual} kg
+                  </div>
                 )}
                 {/* Alertas */}
                 {(urgentes > 0 || proximos > 0) && (
@@ -821,6 +948,7 @@ function PetDetail({ pet, setPets, onBack }) {
         <div style={{ paddingTop:16 }}>
           {aba==="saude"     && <PetSaude    pet={pet} setPets={setPets}/>}
           {aba==="rotina"    && <PetRotina   pet={pet} setPets={setPets}/>}
+          {aba==="peso"      && <PetPeso     pet={pet} setPets={setPets}/>}
           {aba==="galeria"   && <PetGaleria  pet={pet} setPets={setPets}/>}
           {aba==="gastos"    && <PetGastos   pet={pet} setPets={setPets}/>}
           {aba==="historico" && <PetHistorico pet={pet}/>}
@@ -840,18 +968,22 @@ function PetDetail({ pet, setPets, onBack }) {
 function PetsList({ pets, setPets, onOpen, onMenu }) {
   const safePets = Array.isArray(pets) ? pets : [];
   const [adding, setAdding] = useState(false);
-  const [form,   setForm]   = useState({ nome:"", especie:"cachorro", raca:"", sexo:"fêmea" });
+  const [form,   setForm]   = useState({
+    nome:"", apelido:"", especie:"cachorro", raca:"", sexo:"fêmea",
+    dataAdocao:"", temperamento:"",
+  });
 
   const addPet = () => {
     if (!form.nome.trim()) return;
     const novo = {
       id: Date.now().toString(),
-      nome:form.nome, especie:form.especie, raca:form.raca, sexo:form.sexo,
+      nome:form.nome, apelido:form.apelido, especie:form.especie, raca:form.raca, sexo:form.sexo,
+      dataAdocao:form.dataAdocao, temperamento:form.temperamento,
       vacinas:[], vermifugos:[], antipulgas:[], consultas:[],
-      exames:[], cirurgias:[], medicamentos:[], banhos:[], gastos:[], fotos:[],
+      exames:[], cirurgias:[], medicamentos:[], banhos:[], gastos:[], fotos:[], pesos:[],
     };
     setPets(ps => [...(Array.isArray(ps) ? ps : []), novo]);
-    setForm({ nome:"", especie:"cachorro", raca:"", sexo:"fêmea" });
+    setForm({ nome:"", apelido:"", especie:"cachorro", raca:"", sexo:"fêmea", dataAdocao:"", temperamento:"" });
     setAdding(false);
   };
 
@@ -936,6 +1068,11 @@ function PetsList({ pets, setPets, onOpen, onMenu }) {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div className="serif" style={{fontSize:17,fontWeight:700,color:T.text,lineHeight:1.1}}>
                     {pet.nome}
+                    {pet.apelido && (
+                      <span style={{ fontSize:12, fontWeight:500, color:T.textMute, fontStyle:"italic" }}>
+                        {" "}"{pet.apelido}"
+                      </span>
+                    )}
                   </div>
                   <div style={{fontSize:12,color:T.textSub,marginTop:2}}>
                     {pet.raca || pet.especie}
@@ -981,11 +1118,16 @@ function PetsList({ pets, setPets, onOpen, onMenu }) {
         <Modal title="Novo Pet" onClose={() => setAdding(false)}>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <Input label="Nome" value={form.nome} onChange={e=>setForm({...form,nome:e.target.value})} placeholder="Nome do pet"/>
+            <Input label="Apelido (opcional)" value={form.apelido} onChange={e=>setForm({...form,apelido:e.target.value})}/>
             <Select label="Espécie" value={form.especie} onChange={e=>setForm({...form,especie:e.target.value})}
               options={["cachorro","gato","ave","roedor","réptil","outro"]}/>
             <Input label="Raça" value={form.raca} onChange={e=>setForm({...form,raca:e.target.value})}/>
             <Select label="Sexo" value={form.sexo} onChange={e=>setForm({...form,sexo:e.target.value})}
               options={["fêmea","macho"]}/>
+            <Input label="Data de adoção (opcional)" value={form.dataAdocao}
+              onChange={e=>setForm({...form,dataAdocao:e.target.value})} placeholder="dd/mm/aaaa"/>
+            <Input label="Temperamento" value={form.temperamento}
+              onChange={e=>setForm({...form,temperamento:e.target.value})} placeholder="ex: dócil, energético, territorialista"/>
             <ModalActions onCancel={() => setAdding(false)} onSave={addPet} color={T.blue}/>
           </div>
         </Modal>
