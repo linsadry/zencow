@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx"; 
+import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader, SvgIcon } from "../components/primitives.jsx"; 
 import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 
 const MEMORIA_TAGS   = ["Família","Viagem","Pet","Trabalho","Saúde","Conquista","Especial","Cotidiano"];
-const MEMORIA_HUMORES = ["","😄 Feliz","😍 Apaixonada","😌 Tranquila","😤 Estressada","😢 Triste","🤩 Animada","😴 Cansada"];
+const MEMORIA_HUMORES = ["","Feliz","Apaixonada","Tranquila","Estressada","Triste","Animada","Cansada"];
 const MONTH_NAMES    = ["","Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 const parseDate = s => {
@@ -27,15 +27,18 @@ export default function TelaMemorias({ memorias, setMemorias, onMenu }) {
 
         <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:14 }}>
           {[
-            { id:"album",    l:`📷 Álbum (${fotos})`    },
-            { id:"diario",   l:`📝 Diário (${textos})`  },
-            { id:"timeline", l:"⏳ Timeline"             },
+            { id:"album",    icon:"camera",    label:`Álbum (${fotos})`   },
+            { id:"diario",   icon:"notebook",  label:`Diário (${textos})` },
+            { id:"timeline", icon:"hourglass", label:"Timeline"           },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex:1,padding:"7px 8px",borderRadius:8,fontSize:11,fontWeight:700,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:5,
               background: tab===t.id ? T.bgCard : "transparent",
               border:     tab===t.id ? `1px solid ${T.border}` : "none",
-              color:      tab===t.id ? T.text : T.textMute }}>{t.l}</button>
+              color:      tab===t.id ? T.text : T.textMute }}>
+              <SvgIcon name={t.icon} size={12}/>{t.label}
+            </button>
           ))}
         </div>
 
@@ -71,7 +74,9 @@ function AlbumTab({ memorias, setMemorias }) {
 
       {filtered.length===0 ? (
         <Card style={{ padding:"30px",textAlign:"center" }}>
-          <div style={{ fontSize:32,marginBottom:8 }}>📷</div>
+          <div style={{ marginBottom:8,display:"flex",justifyContent:"center" }}>
+            <SvgIcon name="camera" size={32} color={T.textMute}/>
+          </div>
           <div style={{ fontSize:13,color:T.textMute }}>Nenhuma foto aqui ainda</div>
         </Card>
       ) : (
@@ -113,7 +118,10 @@ function AlbumTab({ memorias, setMemorias }) {
           <button
             onClick={e => { e.stopPropagation(); setMemorias(ms => ms.filter(x=>x.id!==viewItem.id)); setViewItem(null); }}
             style={{ marginTop:20,padding:"8px 18px",borderRadius:99,
-              background:T.dangerBg,color:T.danger,fontSize:13,fontWeight:700 }}>🗑️ Remover</button>
+              background:T.dangerBg,color:T.danger,fontSize:13,fontWeight:700,
+              display:"flex",alignItems:"center",gap:6 }}>
+            <SvgIcon name="trash" size={13} color={T.danger}/>Remover
+          </button>
         </div>
       )}
     </>
@@ -133,7 +141,9 @@ function DiarioTab({ memorias, setMemorias }) {
       <div style={{ display:"flex",flexDirection:"column",gap:10,marginBottom:14 }}>
         {sorted.length===0 ? (
           <Card style={{ padding:"30px",textAlign:"center" }}>
-            <div style={{ fontSize:32,marginBottom:8 }}>📝</div>
+            <div style={{ marginBottom:8,display:"flex",justifyContent:"center" }}>
+              <SvgIcon name="notebook" size={32} color={T.textMute}/>
+            </div>
             <div style={{ fontSize:13,color:T.textMute }}>Comece a escrever suas memórias</div>
           </Card>
         ) : sorted.map(m => (
@@ -145,7 +155,7 @@ function DiarioTab({ memorias, setMemorias }) {
                 <div style={{ fontSize:13,fontWeight:700,color:T.text }}>{m.titulo||"Sem título"}</div>
                 <div style={{ fontSize:10,color:T.textMute,marginTop:1 }}>{m.data}</div>
               </div>
-              {m.humor&&<span style={{ fontSize:20 }}>{m.humor.split(" ")[0]}</span>}
+              {m.humor && <Pill label={m.humor} color={T.sand} bg={T.sandBg}/>}
             </div>
             {m.texto&&(
               <div style={{ fontSize:12,color:T.textSub,lineHeight:1.4,
@@ -185,7 +195,9 @@ function TimelineTab({ memorias }) {
 
   if (sorted.length===0) return (
     <Card style={{ padding:"30px",textAlign:"center" }}>
-      <div style={{ fontSize:32,marginBottom:8 }}>⏳</div>
+      <div style={{ marginBottom:8,display:"flex",justifyContent:"center" }}>
+        <SvgIcon name="hourglass" size={32} color={T.textMute}/>
+      </div>
       <div style={{ fontSize:13,color:T.textMute }}>
         Adicione fotos e entradas de diário para ver a linha do tempo
       </div>
@@ -215,7 +227,7 @@ function TimelineTab({ memorias }) {
                 <div key={m.id} style={{ padding:"10px 12px",borderRadius:12,
                   background:T.bgCard,border:`1px solid ${T.border}` }}>
                   <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:18 }}>{m.tipo==="foto" ? "📷" : "📝"}</span>
+                    <SvgIcon name={m.tipo==="foto" ? "camera" : "notebook"} size={16} color={T.textMute}/>
                     <div style={{ flex:1,minWidth:0 }}>
                       <div style={{ fontSize:12,fontWeight:700,color:T.text,
                         overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
@@ -228,7 +240,7 @@ function TimelineTab({ memorias }) {
                         <img src={m.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
                       </div>
                     )}
-                    {m.humor&&<span style={{ fontSize:18,flexShrink:0 }}>{m.humor.split(" ")[0]}</span>}
+                    {m.humor&&<Pill label={m.humor} color={T.sand} bg={T.sandBg}/>}
                   </div>
                 </div>
               ))}
@@ -247,11 +259,11 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
     foto:null, tags:[], texto:"", humor:"",
   });
   const fileRef = useRef();
- const handleFoto = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  const foto = await compressImage(f, 1200, 0.85);
-  setForm(x => ({ ...x, foto }));
-};
+  const handleFoto = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    const foto = await compressImage(f, 1200, 0.85);
+    setForm(x => ({ ...x, foto }));
+  };
   const toggleTag = tag => setForm(f => ({
     ...f, tags: f.tags.includes(tag) ? f.tags.filter(t=>t!==tag) : [...f.tags, tag],
   }));
@@ -271,7 +283,7 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
           {form.foto
             ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
             : <div style={{ textAlign:"center",color:T.textMute }}>
-                <div style={{ fontSize:30 }}>📷</div>
+                <SvgIcon name="camera" size={30} color={T.textMute}/>
                 <div style={{ fontSize:11,fontWeight:600,marginTop:4 }}>
                   {tipo==="foto" ? "Foto" : "Foto (opcional)"}
                 </div>
