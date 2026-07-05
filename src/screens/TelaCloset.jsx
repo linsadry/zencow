@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { T } from "../constants/theme.js";
-import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader } from "../components/primitives.jsx";
+import { Card, Pill, IconBtn, Modal, Input, Select, ModalActions, MascoteHeader, SvgIcon } from "../components/primitives.jsx";
 import AppHeader from "../components/AppHeader.jsx";
 import { compressImage } from "../utils/image.js";
 import { COW_LOLA } from "../constants/images.js";
@@ -8,6 +8,11 @@ import { COW_LOLA } from "../constants/images.js";
 const CLOSET_CATEGORIAS = ["Vestido","Camisa","Blusa","Calça","Saia","Sapato","Acessório","Casaco","Bolsa","Outro"];
 const CLOSET_OCASIOES   = ["Trabalho","Casual","Congresso","Viagem","Evento","Plantão","Festa"];
 const CLOSET_ESTACOES   = ["Verão","Outono","Inverno","Primavera","Todas"];
+const PALETA_OPTIONS    = ["Combina","Neutro","Não combina"];
+
+const paletaCor = v => v==="Combina" ? { c:T.moss, bg:T.mossBg }
+  : v==="Não combina" ? { c:T.danger, bg:T.dangerBg }
+  : { c:T.textMute, bg:T.bgInput };
 
 /* ── Root ─────────────────────────────────────────────────────────────── */
 export default function TelaCloset({ pecas, setPecas, looks, setLooks, onMenu }) {
@@ -27,15 +32,18 @@ export default function TelaCloset({ pecas, setPecas, looks, setLooks, onMenu })
         {/* Sub-tabs */}
         <div style={{ display:"flex",background:T.bgInput,borderRadius:11,padding:3,gap:3,marginBottom:14,overflowX:"auto" }}>
           {[
-            { id:"looks",  l:`👗 Looks (${looks.length})`  },
-            { id:"pecas",  l:`👚 Peças (${pecas.length})`  },
-            { id:"stats",  l:"📊 Estatísticas"             },
+            { id:"looks", icon:"dress", label:`Looks (${looks.length})` },
+            { id:"pecas", icon:"shirt", label:`Peças (${pecas.length})` },
+            { id:"stats", icon:"chart", label:"Estatísticas"           },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex:"1 0 auto",padding:"7px 14px",borderRadius:8,fontSize:12,fontWeight:700,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:6,
               background: tab === t.id ? T.bgCard : "transparent",
               border:     tab === t.id ? `1px solid ${T.border}` : "none",
-              color:      tab === t.id ? T.text : T.textMute,whiteSpace:"nowrap" }}>{t.l}</button>
+              color:      tab === t.id ? T.text : T.textMute,whiteSpace:"nowrap" }}>
+              <SvgIcon name={t.icon} size={13}/>{t.label}
+            </button>
           ))}
         </div>
 
@@ -98,14 +106,19 @@ function LooksTab({ looks, setLooks, pecas, setPecas, filtro, setFiltro, addLook
                 display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
                 {l.foto
                   ? <img src={l.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-                  : <span style={{ fontSize:36 }}>👗</span>}
+                  : <SvgIcon name="dress" size={36} color={T.sand}/>}
               </div>
               <div style={{ padding:"8px 10px" }}>
                 <div style={{ fontSize:12,fontWeight:700,color:T.text,
                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{l.titulo || "Sem título"}</div>
                 <div style={{ fontSize:10,color:T.textMute,marginTop:2 }}>{l.ocasiao} · {l.data}</div>
               </div>
-              {l.favorito && <div style={{ position:"absolute",top:6,right:6,fontSize:16 }}>❤️</div>}
+              {l.favorito && (
+                <div style={{ position:"absolute",top:6,right:6,width:26,height:26,borderRadius:"50%",
+                  background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                  <SvgIcon name="heart" size={13} color={T.sand}/>
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -136,15 +149,18 @@ function LooksTab({ looks, setLooks, pecas, setPecas, filtro, setFiltro, addLook
 
 /* ── Peças Tab ─────────────────────────────────────────────────────────── */
 function PecasTab({ pecas, setPecas, filtro, setFiltro, addPeca, setAddPeca, editPeca, setEditPeca }) {
-  const filtered = (() => {
-    if (filtro === "Favoritos") return pecas.filter((p) => p.favorito);
-    if (filtro !== "Todos")     return pecas.filter((p) => p.categoria === filtro);
-    return pecas;
-  })();
+  const [filtroPaleta, setFiltroPaleta] = useState("Todas");
+
+  const filtered = pecas.filter((p) => {
+    if (filtro === "Favoritos" && !p.favorito) return false;
+    if (filtro !== "Todos" && filtro !== "Favoritos" && p.categoria !== filtro) return false;
+    if (filtroPaleta !== "Todas" && (p.paleta || "Neutro") !== filtroPaleta) return false;
+    return true;
+  });
 
   return (
     <>
-      <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:4 }}>
+      <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:8,paddingBottom:4 }}>
         {["Todos","Favoritos",...CLOSET_CATEGORIAS].map((c) => (
           <button key={c} onClick={() => setFiltro(c)} style={{
             padding:"5px 11px",borderRadius:99,fontSize:11,fontWeight:700,
@@ -155,30 +171,57 @@ function PecasTab({ pecas, setPecas, filtro, setFiltro, addPeca, setAddPeca, edi
         ))}
       </div>
 
+      <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:4,alignItems:"center" }}>
+        <SvgIcon name="palette" size={13} color={T.textMute}/>
+        {["Todas",...PALETA_OPTIONS].map((c) => {
+          const active = filtroPaleta===c;
+          const col = c==="Todas" ? { c:T.textSub, bg:T.bgCard } : paletaCor(c);
+          return (
+            <button key={c} onClick={() => setFiltroPaleta(c)} style={{
+              padding:"5px 11px",borderRadius:99,fontSize:11,fontWeight:700,
+              background: active ? col.c : col.bg,
+              color:      active ? "#fff" : col.c,
+              border:`1px solid ${active ? col.c : T.border}`,
+              whiteSpace:"nowrap",flexShrink:0 }}>{c}</button>
+          );
+        })}
+      </div>
+
       {filtered.length === 0 ? (
         <Card style={{ padding:"24px",textAlign:"center" }}>
           <div style={{ fontSize:13,color:T.textMute }}>Nenhuma peça aqui</div>
         </Card>
       ) : (
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
-          {filtered.map((p) => (
-            <button key={p.id} onClick={() => setEditPeca({ ...p })} style={{
-              borderRadius:12,overflow:"hidden",background:T.bgCard,
-              border:`1px solid ${T.border}`,textAlign:"left",position:"relative" }}>
-              <div style={{ aspectRatio:"1",background:T.sandBg,
-                display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
-                {p.foto
-                  ? <img src={p.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
-                  : <span style={{ fontSize:30 }}>👚</span>}
-              </div>
-              <div style={{ padding:"8px 10px" }}>
-                <div style={{ fontSize:12,fontWeight:700,color:T.text,
-                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{p.nome}</div>
-                <div style={{ fontSize:10,color:T.textMute,marginTop:2 }}>{p.categoria} · {p.cor}</div>
-              </div>
-              {p.favorito && <div style={{ position:"absolute",top:6,right:6,fontSize:14 }}>❤️</div>}
-            </button>
-          ))}
+          {filtered.map((p) => {
+            const pc = paletaCor(p.paleta || "Neutro");
+            return (
+              <button key={p.id} onClick={() => setEditPeca({ ...p })} style={{
+                borderRadius:12,overflow:"hidden",background:T.bgCard,
+                border:`1px solid ${T.border}`,textAlign:"left",position:"relative" }}>
+                <div style={{ aspectRatio:"1",background:T.sandBg,
+                  display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden" }}>
+                  {p.foto
+                    ? <img src={p.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
+                    : <SvgIcon name="shirt" size={30} color={T.sand}/>}
+                </div>
+                <div style={{ padding:"8px 10px" }}>
+                  <div style={{ fontSize:12,fontWeight:700,color:T.text,
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{p.nome}</div>
+                  <div style={{ fontSize:10,color:T.textMute,marginTop:2 }}>{p.categoria} · {p.cor}</div>
+                  <div style={{ marginTop:5 }}>
+                    <Pill label={p.paleta || "Neutro"} color={pc.c} bg={pc.bg}/>
+                  </div>
+                </div>
+                {p.favorito && (
+                  <div style={{ position:"absolute",top:6,right:6,width:22,height:22,borderRadius:"50%",
+                    background:"rgba(255,255,255,.85)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                    <SvgIcon name="heart" size={11} color={T.sand}/>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -211,6 +254,9 @@ function ClosetStats({ pecas, looks }) {
   const topCores = Object.entries(cores).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const favLooks = looks.filter((l) => l.favorito);
 
+  const paletaCounts = { "Combina":0, "Neutro":0, "Não combina":0 };
+  pecas.forEach(p => { paletaCounts[p.paleta || "Neutro"] = (paletaCounts[p.paleta || "Neutro"]||0) + 1; });
+
   return (
     <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
       <Card style={{ padding:"14px 16px",background:T.sandBg,border:`1px solid ${T.sand}22` }}>
@@ -226,7 +272,27 @@ function ClosetStats({ pecas, looks }) {
       </Card>
 
       <Card style={{ padding:"14px 16px" }}>
-        <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:10 }}>🏆 Peças mais usadas</div>
+        <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:7 }}>
+          <SvgIcon name="palette" size={15}/>Combinação com a paleta
+        </div>
+        <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+          {PALETA_OPTIONS.map(opt => {
+            const pc = paletaCor(opt);
+            return (
+              <div key={opt} style={{ display:"flex",alignItems:"center",gap:10,
+                padding:"6px 8px",background:T.bgInput,borderRadius:8 }}>
+                <span style={{ flex:1,fontSize:13,fontWeight:600 }}>{opt}</span>
+                <Pill label={`${paletaCounts[opt]}`} color={pc.c} bg={pc.bg}/>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card style={{ padding:"14px 16px" }}>
+        <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:7 }}>
+          <SvgIcon name="trophy" size={15}/>Peças mais usadas
+        </div>
         {top.every((p) => !p.usos) ? (
           <div style={{ fontSize:12,color:T.textMute,fontStyle:"italic" }}>Registre looks para ver as peças mais usadas</div>
         ) : (
@@ -244,7 +310,9 @@ function ClosetStats({ pecas, looks }) {
       </Card>
 
       <Card style={{ padding:"14px 16px" }}>
-        <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:10 }}>🎨 Cores mais utilizadas</div>
+        <div className="serif" style={{ fontSize:15,fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:7 }}>
+          <SvgIcon name="palette" size={15}/>Cores mais utilizadas
+        </div>
         {topCores.length === 0 ? (
           <div style={{ fontSize:12,color:T.textMute,fontStyle:"italic" }}>Crie looks para ver as cores mais usadas</div>
         ) : (
@@ -266,14 +334,14 @@ function ClosetStats({ pecas, looks }) {
 /* ── PecaModal ─────────────────────────────────────────────────────────── */
 function PecaModal({ peca, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(peca || {
-    nome:"",categoria:"Vestido",cor:"",ocasiao:"Casual",estacao:"Todas",foto:null,favorito:false,
+    nome:"",categoria:"Vestido",cor:"",ocasiao:"Casual",estacao:"Todas",foto:null,favorito:false,paleta:"Neutro",
   });
   const fileRef = useRef();
   const handleFoto = async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  const foto = await compressImage(f, 800, 0.85);
-  setForm((x) => ({ ...x, foto }));
-};
+    const f = e.target.files[0]; if (!f) return;
+    const foto = await compressImage(f, 800, 0.85);
+    setForm((x) => ({ ...x, foto }));
+  };
 
   return (
     <Modal title={peca ? "Editar Peça" : "Nova Peça"} onClose={onClose}>
@@ -285,7 +353,7 @@ function PecaModal({ peca, onClose, onSave, onDelete }) {
           {form.foto
             ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
             : <div style={{ textAlign:"center",color:T.textMute }}>
-                <div style={{ fontSize:32 }}>📷</div>
+                <SvgIcon name="camera" size={32} color={T.textMute}/>
                 <div style={{ fontSize:12,fontWeight:600,marginTop:6 }}>Toque para foto</div>
               </div>}
         </button>
@@ -317,11 +385,17 @@ function PecaModal({ peca, onClose, onSave, onDelete }) {
           </div>
         </div>
 
+        <Select label="Combina com minha paleta (Dark Autumn)" value={form.paleta || "Neutro"}
+          onChange={(e) => setForm((f) => ({ ...f, paleta: e.target.value }))}
+          options={PALETA_OPTIONS}/>
+
         <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",
           padding:"10px 12px",borderRadius:10,background:T.bgInput,border:`1px solid ${T.border}` }}>
           <input type="checkbox" checked={form.favorito}
             onChange={(e) => setForm((f) => ({ ...f, favorito: e.target.checked }))}/>
-          <span style={{ fontSize:13,fontWeight:600 }}>❤️ Favorita</span>
+          <span style={{ fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6 }}>
+            <SvgIcon name="heart" size={13} color={T.sand}/>Favorita
+          </span>
         </label>
 
         <ModalActions onCancel={onClose} onSave={() => onSave(form)} onDelete={onDelete} color={T.sand}/>
@@ -339,10 +413,10 @@ function LookModal({ look, pecas, onClose, onSave, onDelete }) {
   });
   const fileRef = useRef();
   const handleFoto = async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  const foto = await compressImage(f, 800, 0.85);
-  setForm((x) => ({ ...x, foto }));
-};
+    const f = e.target.files[0]; if (!f) return;
+    const foto = await compressImage(f, 800, 0.85);
+    setForm((x) => ({ ...x, foto }));
+  };
   const togglePeca = (id) => setForm((f) => ({
     ...f, pecasIds: f.pecasIds.includes(id) ? f.pecasIds.filter((x) => x !== id) : [...f.pecasIds, id],
   }));
@@ -357,7 +431,7 @@ function LookModal({ look, pecas, onClose, onSave, onDelete }) {
           {form.foto
             ? <img src={form.foto} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }}/>
             : <div style={{ textAlign:"center",color:T.textMute }}>
-                <div style={{ fontSize:34 }}>📷</div>
+                <SvgIcon name="camera" size={34} color={T.textMute}/>
                 <div style={{ fontSize:12,fontWeight:600,marginTop:6 }}>Foto do look</div>
               </div>}
         </button>
@@ -409,7 +483,9 @@ function LookModal({ look, pecas, onClose, onSave, onDelete }) {
           padding:"10px 12px",borderRadius:10,background:T.bgInput,border:`1px solid ${T.border}` }}>
           <input type="checkbox" checked={form.favorito}
             onChange={(e) => setForm((f) => ({ ...f, favorito: e.target.checked }))}/>
-          <span style={{ fontSize:13,fontWeight:600 }}>❤️ Favorito</span>
+          <span style={{ fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6 }}>
+            <SvgIcon name="heart" size={13} color={T.sand}/>Favorito
+          </span>
         </label>
 
         <ModalActions onCancel={onClose} onSave={() => onSave(form)} onDelete={onDelete} color={T.sand}/>
