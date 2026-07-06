@@ -332,6 +332,66 @@ function PetGastos({ pet, setPets }) {
 /* ════════════════════════════════════════════════════════════════ */
 /* PetPeso — acompanhamento de peso                                */
 /* ════════════════════════════════════════════════════════════════ */
+/* ── PesoChart — gráfico de evolução em SVG puro ─────────────────── */
+function PesoChart({ pesos }) {
+  const pontos = [...pesos]
+    .filter(p => p.data && p.valor)
+    .sort((a,b) => (parseDate(a.data)||0) - (parseDate(b.data)||0));
+
+  if (pontos.length < 2) return null;
+
+  const W = 320, H = 140, padL = 34, padR = 12, padT = 16, padB = 24;
+  const valores = pontos.map(p => parseFloat(p.valor));
+  const min = Math.min(...valores);
+  const max = Math.max(...valores);
+  const range = max - min || 1;
+  const yPad = range * 0.2;
+  const yMin = min - yPad, yMax = max + yPad;
+
+  const x = i => padL + (i * (W - padL - padR)) / (pontos.length - 1);
+  const y = v => H - padB - ((v - yMin) / (yMax - yMin)) * (H - padT - padB);
+
+  const linePoints = pontos.map((p,i) => `${x(i)},${y(parseFloat(p.valor))}`).join(" ");
+
+  const showIdx = new Set([0, pontos.length - 1]);
+  if (pontos.length <= 6) {
+    pontos.forEach((_, i) => showIdx.add(i));
+  } else {
+    const step = Math.max(1, Math.floor((pontos.length - 1) / 4));
+    for (let i = step; i < pontos.length - 1; i += step) showIdx.add(i);
+  }
+
+  const guias = [yMin, (yMin + yMax) / 2, yMax];
+
+  return (
+    <Card style={{ padding:"14px 16px", marginBottom:14 }}>
+      <div style={{ fontSize:11, color:T.textMute, fontWeight:700, letterSpacing:.3, marginBottom:8 }}>
+        EVOLUÇÃO
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display:"block", overflow:"visible" }}>
+        {guias.map((v,i) => (
+          <line key={`gl${i}`} x1={padL} x2={W-padR} y1={y(v)} y2={y(v)} stroke={T.border} strokeWidth="1"/>
+        ))}
+        {guias.map((v,i) => (
+          <text key={`gt${i}`} x={padL-6} y={y(v)+3} fontSize="9" fill={T.textMute} textAnchor="end">
+            {v.toFixed(1)}
+          </text>
+        ))}
+        <polyline points={linePoints} fill="none" stroke={T.blue} strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"/>
+        {pontos.map((p,i) => (
+          <circle key={`c${i}`} cx={x(i)} cy={y(parseFloat(p.valor))} r="3.5"
+            fill={T.blue} stroke="#fff" strokeWidth="1.5"/>
+        ))}
+        {pontos.map((p,i) => showIdx.has(i) && (
+          <text key={`t${i}`} x={x(i)} y={H-6} fontSize="8.5" fill={T.textMute} textAnchor="middle">
+            {p.data.split("/").slice(0,2).join("/")}
+          </text>
+        ))}
+      </svg>
+    </Card>
+  );
+}
 function PetPeso({ pet, setPets }) {
   const [form, setForm] = useState(null);
   const pesos = pet.pesos || [];
@@ -365,6 +425,8 @@ function PetPeso({ pet, setPets }) {
           + Registrar
         </button>
       </div>
+
+      <PesoChart pesos={pesos}/>
 
       {atual && (
         <Card style={{ padding:"14px 16px", marginBottom:14, background:T.blueBg, border:`1px solid ${T.blue}33` }}>
