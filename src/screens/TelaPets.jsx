@@ -4,7 +4,7 @@ import { Card, Pill, IconBtn, Modal, MascoteHeader, Input, Select, ModalActions 
                             from "../components/primitives.jsx";
 import { T }               from "../constants/index.js";
 import { COW_MARGARIDA }   from "../constants/images.js";
-import { parseDate, daysSince, formatDays } from "../utils/dates.js";
+import { parseDate, daysSince, formatDays, toBR } from "../utils/dates.js";
 import { getPetAlerts, getAllPetAlerts }     from "../utils/pets.js";
 
 /* compressImage inline — sem depender de utils/image.js */
@@ -108,7 +108,7 @@ function PetHistorico({ pet }) {
   (pet.cirurgias  || []).forEach(c => eventos.push({ tipo:"Cirurgia",   tipoKey:"cirurgia",  titulo:c.tipo,     data:c.data }));
   (pet.banhos     || []).forEach(b => eventos.push({ tipo:"Banho",      tipoKey:"banho",     titulo:b.local||"", data:b.data }));
 
-  eventos.sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  eventos.sort((a, b) => (parseDate(b.data) || 0) - (parseDate(a.data) || 0));
 
   if (eventos.length === 0) return (
     <div style={{ textAlign:"center", padding:"48px 20px", color:T.textMute }}>
@@ -136,7 +136,7 @@ function PetHistorico({ pet }) {
                 <span style={{ fontSize:11, fontWeight:700, color:cor, letterSpacing:.2 }}>
                   {ev.tipo.toUpperCase()}
                 </span>
-                <span style={{ fontSize:11, color:T.textMute }}>{ev.data}</span>
+                <span style={{ fontSize:11, color:T.textMute }}>{toBR(ev.data)}</span>
               </div>
               <div style={{ fontSize:13, color:T.text, fontWeight:500 }}>{ev.titulo}</div>
             </div>
@@ -270,7 +270,7 @@ function PetGastos({ pet, setPets }) {
                 <span style={{ fontSize:13, fontWeight:700, color:T.text }}>{g.descricao}</span>
               </div>
               <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>
-                {g.data} · {g.categoria}
+                {toBR(g.data)} · {g.categoria}
                 {g.recorrente && <span style={{ color:T.sand }}> · {g.frequencia}</span>}
               </div>
             </div>
@@ -548,7 +548,7 @@ function PetRotina({ pet, setPets }) {
         <Card key={b.id} style={{ padding:"12px 14px", marginBottom:8,
           display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{b.data}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{toBR(b.data)}</div>
             {b.local && <div style={{ fontSize:11, color:T.textMute, marginTop:1 }}>{b.local}</div>}
             {b.observacao && <div style={{ fontSize:11, color:T.textSub, marginTop:2, fontStyle:"italic" }}>{b.observacao}</div>}
           </div>
@@ -701,13 +701,13 @@ function SaudeSection({ title, items=[], type, pet, setPets, render, color=T.blu
 /* ════════════════════════════════════════════════════════════════ */
 function PetSaude({ pet, setPets }) {
   const render = {
-    vacina:     v => ({ primary:v.nome,     secondary:`Aplicada: ${v.data}`,    next: v.proxima ? `Próxima: ${v.proxima}` : null }),
-    vermifugo:  v => ({ primary:v.produto,  secondary:`Aplicado: ${v.data}`,    next: v.proxima ? `Próximo: ${v.proxima}` : null }),
-    antipulga:  v => ({ primary:v.produto,  secondary:`Aplicado: ${v.data}`,    next: v.proxima ? `Próximo: ${v.proxima}` : null }),
-    consulta:   c => ({ primary:c.motivo,   secondary:`${c.data} · ${c.veterinario||""}`,  next:null }),
-    exame:      e => ({ primary:e.tipo,     secondary:`${e.data}`,              next:null }),
-    cirurgia:   c => ({ primary:c.tipo,     secondary:`${c.data} · ${c.veterinario||""}`,  next:null }),
-    medicamento:m => ({ primary:m.nome,     secondary:`${m.data} · ${m.dose}`,  next:null }),
+    vacina:     v => ({ primary:v.nome,     secondary:`Aplicada: ${toBR(v.data)}`,    next: v.proxima ? `Próxima: ${toBR(v.proxima)}` : null }),
+    vermifugo:  v => ({ primary:v.produto,  secondary:`Aplicado: ${toBR(v.data)}`,    next: v.proxima ? `Próximo: ${toBR(v.proxima)}` : null }),
+    antipulga:  v => ({ primary:v.produto,  secondary:`Aplicado: ${toBR(v.data)}`,    next: v.proxima ? `Próximo: ${toBR(v.proxima)}` : null }),
+    consulta:   c => ({ primary:c.motivo,   secondary:`${toBR(c.data)} · ${c.veterinario||""}`,  next:null }),
+    exame:      e => ({ primary:e.tipo,     secondary:`${toBR(e.data)}`,              next:null }),
+    cirurgia:   c => ({ primary:c.tipo,     secondary:`${toBR(c.data)} · ${c.veterinario||""}`,  next:null }),
+    medicamento:m => ({ primary:m.nome,     secondary:`${toBR(m.data)} · ${m.dose}`,  next:null }),
   };
 
   return (
