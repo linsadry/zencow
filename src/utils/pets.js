@@ -1,12 +1,7 @@
-/* utils/pets.js — helpers inline para não depender de dates.js */
+import { daysUntil as daysUntilShared } from "./dates.js";
 
 function daysUntil(dateStr) {
-  if (!dateStr) return null;
-  try {
-    const [d, m, y] = String(dateStr).split("/");
-    const t = new Date(+y, +m - 1, +d);
-    return Math.ceil((t - new Date()) / 86400000);
-  } catch { return null; }
+  return daysUntilShared(dateStr);
 }
 function alertLevel(days) {
   if (days === null || days === undefined) return null;
@@ -14,7 +9,6 @@ function alertLevel(days) {
   if (days <= 14) return "alert";
   return null;
 }
-
 export const getPetAlerts = (pet) => {
   if (!pet) return [];
   const a = [];
@@ -27,7 +21,6 @@ export const getPetAlerts = (pet) => {
   (pet.antipulgas || []).forEach(v => push("Antipulga", v.produto, daysUntil(v.proxima)));
   return a.sort((a, b) => a.dias - b.dias);
 };
-
 export const getAllPetAlerts = (pets) => {
   if (!Array.isArray(pets)) return [];
   const all = [];
