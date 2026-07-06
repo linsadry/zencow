@@ -392,6 +392,10 @@ function PesoChart({ pesos }) {
     </Card>
   );
 }
+
+/* ════════════════════════════════════════════════════════════════ */
+/* PetPeso — acompanhamento de peso                                */
+/* ════════════════════════════════════════════════════════════════ */
 function PetPeso({ pet, setPets }) {
   const [form, setForm] = useState(null);
   const pesos = pet.pesos || [];
