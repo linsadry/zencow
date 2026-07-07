@@ -14,6 +14,13 @@ const parseDate = s => {
   return new Date(y, m-1, d);
 };
 
+/* Une as tags fixas com quaisquer tags customizadas já usadas nas memórias */
+const getAllTags = (memorias) => {
+  const custom = new Set();
+  memorias.forEach(m => (m.tags||[]).forEach(t => { if (t && !MEMORIA_TAGS.includes(t)) custom.add(t); }));
+  return [...MEMORIA_TAGS, ...[...custom].sort()];
+};
+
 export default function TelaMemorias({ memorias, setMemorias, onMenu }) {
   const [tab, setTab] = useState("album");
   const fotos  = memorias.filter(m => m.tipo==="foto").length;
@@ -54,15 +61,17 @@ export default function TelaMemorias({ memorias, setMemorias, onMenu }) {
 function AlbumTab({ memorias, setMemorias }) {
   const [addModal, setAddModal] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+  const [editItem, setEditItem] = useState(null);
   const [filtro,   setFiltro]   = useState("Todos");
 
+  const allTags  = getAllTags(memorias);
   const fotos    = memorias.filter(m => m.tipo==="foto");
   const filtered = filtro==="Todos" ? fotos : fotos.filter(m => (m.tags||[]).includes(filtro));
 
   return (
     <>
       <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12,paddingBottom:4 }}>
-        {["Todos",...MEMORIA_TAGS].map(t => (
+        {["Todos",...allTags].map(t => (
           <button key={t} onClick={() => setFiltro(t)} style={{
             padding:"5px 11px",borderRadius:99,fontSize:11,fontWeight:700,
             background: filtro===t ? T.sand : T.bgCard,
@@ -97,7 +106,7 @@ function AlbumTab({ memorias, setMemorias }) {
         boxShadow:"0 2px 12px rgba(196,169,106,.3)" }}>+ Adicionar Foto</button>
 
       {addModal && (
-        <MemoriaModal tipo="foto" onClose={() => setAddModal(false)}
+        <MemoriaModal tipo="foto" allTags={allTags} onClose={() => setAddModal(false)}
           onSave={m => { setMemorias(ms => [...ms, {id:Date.now(),tipo:"foto",...m}]); setAddModal(false); }}/>
       )}
 
@@ -105,7 +114,7 @@ function AlbumTab({ memorias, setMemorias }) {
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.9)",zIndex:700,
           display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20 }}
           onClick={() => setViewItem(null)}>
-          <img src={viewItem.foto} alt="" style={{ maxWidth:"100%",maxHeight:"65%",borderRadius:14 }}/>
+          <img src={viewItem.foto} alt="" style={{ maxWidth:"100%",maxHeight:"60%",borderRadius:14 }}/>
           <div style={{ color:"#fff",marginTop:12,fontSize:14,fontWeight:700 }}>{viewItem.titulo||""}</div>
           <div style={{ color:"#ffffff88",marginTop:4,fontSize:12 }}>{viewItem.data}</div>
           {(viewItem.tags||[]).length>0 && (
@@ -115,14 +124,29 @@ function AlbumTab({ memorias, setMemorias }) {
               ))}
             </div>
           )}
-          <button
-            onClick={e => { e.stopPropagation(); setMemorias(ms => ms.filter(x=>x.id!==viewItem.id)); setViewItem(null); }}
-            style={{ marginTop:20,padding:"8px 18px",borderRadius:99,
-              background:T.dangerBg,color:T.danger,fontSize:13,fontWeight:700,
-              display:"flex",alignItems:"center",gap:6 }}>
-            <SvgIcon name="trash" size={13} color={T.danger}/>Remover
-          </button>
+          <div style={{ display:"flex",gap:10,marginTop:20 }}>
+            <button
+              onClick={e => { e.stopPropagation(); setEditItem(viewItem); setViewItem(null); }}
+              style={{ padding:"8px 18px",borderRadius:99,
+                background:"rgba(255,255,255,.15)",color:"#fff",fontSize:13,fontWeight:700,
+                display:"flex",alignItems:"center",gap:6 }}>
+              <SvgIcon name="pencil" size={13} color="#fff"/>Editar
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setMemorias(ms => ms.filter(x=>x.id!==viewItem.id)); setViewItem(null); }}
+              style={{ padding:"8px 18px",borderRadius:99,
+                background:T.dangerBg,color:T.danger,fontSize:13,fontWeight:700,
+                display:"flex",alignItems:"center",gap:6 }}>
+              <SvgIcon name="trash" size={13} color={T.danger}/>Remover
+            </button>
+          </div>
         </div>
+      )}
+
+      {editItem && (
+        <MemoriaModal tipo="foto" memoria={editItem} allTags={allTags} onClose={() => setEditItem(null)}
+          onSave={m => { setMemorias(ms => ms.map(x => x.id===editItem.id ? {...x,...m} : x)); setEditItem(null); }}
+          onDelete={() => { setMemorias(ms => ms.filter(x => x.id!==editItem.id)); setEditItem(null); }}/>
       )}
     </>
   );
@@ -133,6 +157,7 @@ function DiarioTab({ memorias, setMemorias }) {
   const [addModal, setAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
+  const allTags = getAllTags(memorias);
   const sorted = [...memorias.filter(m => m.tipo==="texto")]
     .sort((a,b) => parseDate(b.data) - parseDate(a.data));
 
@@ -177,11 +202,11 @@ function DiarioTab({ memorias, setMemorias }) {
         boxShadow:"0 2px 12px rgba(196,169,106,.3)" }}>+ Nova Entrada</button>
 
       {addModal && (
-        <MemoriaModal tipo="texto" onClose={() => setAddModal(false)}
+        <MemoriaModal tipo="texto" allTags={allTags} onClose={() => setAddModal(false)}
           onSave={m => { setMemorias(ms => [...ms, {id:Date.now(),tipo:"texto",...m}]); setAddModal(false); }}/>
       )}
       {editItem && (
-        <MemoriaModal tipo="texto" memoria={editItem} onClose={() => setEditItem(null)}
+        <MemoriaModal tipo="texto" memoria={editItem} allTags={allTags} onClose={() => setEditItem(null)}
           onSave={m => { setMemorias(ms => ms.map(x => x.id===editItem.id ? {...x,...m} : x)); setEditItem(null); }}
           onDelete={() => { setMemorias(ms => ms.filter(x => x.id!==editItem.id)); setEditItem(null); }}/>
       )}
@@ -253,11 +278,12 @@ function TimelineTab({ memorias }) {
 }
 
 /* ── MemoriaModal ─────────────────────────────────────────────── */
-function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
+function MemoriaModal({ tipo, memoria, allTags=MEMORIA_TAGS, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(memoria || {
     titulo:"", data:new Date().toLocaleDateString("pt-BR"),
     foto:null, tags:[], texto:"", humor:"",
   });
+  const [novaTag, setNovaTag] = useState("");
   const fileRef = useRef();
   const handleFoto = async e => {
     const f = e.target.files[0]; if (!f) return;
@@ -267,6 +293,15 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
   const toggleTag = tag => setForm(f => ({
     ...f, tags: f.tags.includes(tag) ? f.tags.filter(t=>t!==tag) : [...f.tags, tag],
   }));
+  const addTagCustom = () => {
+    const t = novaTag.trim();
+    if (!t || form.tags.includes(t)) { setNovaTag(""); return; }
+    setForm(f => ({ ...f, tags: [...f.tags, t] }));
+    setNovaTag("");
+  };
+
+  /* mostra tags já existentes no form mesmo que não estejam em allTags (edge case) */
+  const chips = [...new Set([...allTags, ...form.tags])];
 
   return (
     <Modal title={memoria ? "Editar" : tipo==="foto" ? "Nova Foto" : "Nova Entrada"} onClose={onClose}>
@@ -308,8 +343,8 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
 
         <div>
           <div style={{ fontSize:11,color:T.textMute,fontWeight:700,marginBottom:6,letterSpacing:.3 }}>TAGS</div>
-          <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-            {MEMORIA_TAGS.map(tag => {
+          <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:8 }}>
+            {chips.map(tag => {
               const sel = form.tags.includes(tag);
               return (
                 <button key={tag} onClick={() => toggleTag(tag)} style={{
@@ -319,6 +354,16 @@ function MemoriaModal({ tipo, memoria, onClose, onSave, onDelete }) {
                   border:`1px solid ${sel ? T.sand : T.border}` }}>{tag}</button>
               );
             })}
+          </div>
+          <div style={{ display:"flex",gap:8 }}>
+            <input value={novaTag} onChange={e=>setNovaTag(e.target.value)}
+              onKeyDown={e => { if (e.key==="Enter") { e.preventDefault(); addTagCustom(); } }}
+              placeholder="Criar nova tag..."
+              style={{ flex:1,padding:"8px 12px",borderRadius:10,
+                border:`1px solid ${T.border}`,background:T.bgInput,fontSize:12,color:T.text }}/>
+            <button onClick={addTagCustom} style={{
+              padding:"8px 14px",borderRadius:10,fontSize:12,fontWeight:700,
+              background:T.sand,color:"#fff" }}>+</button>
           </div>
         </div>
 
