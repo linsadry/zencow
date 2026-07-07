@@ -36,10 +36,10 @@ export default function TelaHome({ state={}, pets=[], pecas=[], memorias=[], onM
   const petD = petAlerts.filter(a=>a.nivel==="danger").length;
   const petA = petAlerts.filter(a=>a.nivel==="alert").length;
   const compPend = (Array.isArray(compras)?compras:[]).filter(c=>!c.feito).length;
-  const tarefasAt = (Array.isArray(tarefas)?tarefas:[]).filter(t=>{
-    if(!t.ultimaVez) return true;
-    return daysSince(t.ultimaVez) >= (FREQ[t.frequencia]||7);
-  }).length;
+  const tarefasAt = (Array.isArray(tarefas)?tarefas:[]).reduce(
+    (sum, comodo) => sum + (Array.isArray(comodo.pendencias) ? comodo.pendencias.filter(p => !p.feita).length : 0),
+    0
+  );
 
   const ultimaMem = [...sM].sort((a,b)=>{
     const p=s=>{if(!s)return 0;const[d,m,y]=s.split("/");return new Date(+y,+m-1,+d);};
